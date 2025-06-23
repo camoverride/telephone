@@ -1,0 +1,10 @@
+__pycache__
+.venv
+
+# Temp audio files
+*.wav
+
+# Temp model files
+**.zip
+**.15
+**.pkl

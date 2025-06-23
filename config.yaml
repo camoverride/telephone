@@ -1,0 +1,11 @@
+# How long to record a chunk. 5 seconds is good for Pi 5.
+recording_duration: 5
+
+# ASR model options: `vosk`.
+speech_to_text_model: vosk
+
+# Response model options: `echo`, `random_markov`.
+response_model: random_markov
+
+# TTS model options: `command_line`, `google_tts`.
+text_to_speech_model: google_tts
