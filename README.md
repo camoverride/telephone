@@ -60,11 +60,17 @@ Follow these steps in order:
 - Set up periodic reboots (cron job)
 
 
-## TODO's
+## Todo's & Notes
 
-- [ ] set up additional ASR models (whisper)
-- [ ] set up additional response models (Markov)
-- [ ] set up additional TTS models (???)
-- [ ] set up level-press GPIO start (with exeternal pull up/down resistor?)
+Important:
+
+- [ ] set up additional response models (conditioned markov, llama)
+- [ ] set up lever-press GPIO start (with exeternal pull up/down resistor?)
+- [ ] research [this repo](https://github.com/heristop/gutenku) for haiku model
+
+Less important:
+
 - [ ] suppress annying vox logs
 - [ ] remove ephemeral files to allow Read-Only FS
+- [ ] vosk model seems to work fine, but potentially set up Whisper too.
+- [ ] google works fine, but potentially set up additional TTS models
