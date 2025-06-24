@@ -31,7 +31,14 @@ def main():
             input_text = speech_to_text(audio_file_path=audio_input_filepath,
                                         model=config["speech_to_text_model"])
 
-            print(f"Recognized text :  {input_text}")
+
+            if input_text == "" or None:
+                print("Nothing recognized!")
+
+                continue
+
+            else:
+                print(f"Recognized text :  {input_text}")
 
 
             # Response generation.
