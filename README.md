@@ -60,11 +60,17 @@ Follow these steps in order:
 - Set up periodic reboots (cron job)
 
 
-## Todo's & Notes
+## Notes & Todo's
+
+- ASR: Vosk seems adequte, as people are speaking very close to the mic.
+- TTS: I like the google voice model.
+- Response: tiny-llama should be OK!
+
 
 Important:
 
-- [ ] set up additional response models (conditioned markov, llama)
+- [ ] set up additional response models (conditioned markov, llama, tiny-llama [local])
+- [ ] set up additional synthesis model (piper-tts)
 - [ ] set up lever-press GPIO start (with exeternal pull up/down resistor?)
 - [ ] research [this repo](https://github.com/heristop/gutenku) for haiku model
 
