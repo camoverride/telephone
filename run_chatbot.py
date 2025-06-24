@@ -12,6 +12,8 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
+SILENCED = False
+
 
 def main():
 
@@ -30,9 +32,20 @@ def main():
             # Speech to text.
             input_text = speech_to_text(audio_file_path=audio_input_filepath,
                                         model=config["speech_to_text_model"])
+            
+            # Check for silencing.
+            if input_text == "silence":
+                SILENCED = True
+            
+            if input_text == "continue":
+                SILENCED = False
+
+            if SILENCED:
+                continue
 
 
-            if input_text == "" or None:
+            if input_text in ("", " ", None, "huh"):
+                # TODO  - add ignored phrases
                 print("Nothing recognized!")
 
                 continue
