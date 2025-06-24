@@ -34,6 +34,9 @@ import platform
 #     def phone_picked_up():
 #         return True
 
+def phone_picked_up():
+    return True
+
 
 
 def record_audio(save_filepath : str,
