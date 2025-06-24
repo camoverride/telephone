@@ -109,7 +109,7 @@ def play_audio(filename : str) -> None:
     
     # Use aplay for Raspberry Pi audio playback (Linux)
     elif platform.system() == "Linux":
-        subprocess.run(["aplay", filename])
+        subprocess.run(["ffplay", "-autoexit", filename])
     
     # The system is not recognized.
     else:
