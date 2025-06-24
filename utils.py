@@ -4,30 +4,30 @@ import subprocess
 import platform
 
 
-if platform.system() == "Linux":
-    import RPi.GPIO as GPIO
+# if platform.system() == "Linux":
+#     import RPi.GPIO as GPIO
 
-    # Choose the pin. GPIO 17, physical pin 11.
-    BUTTON_PIN = 17
+#     # Choose the pin. GPIO 17, physical pin 11.
+#     BUTTON_PIN = 17
 
-    # Set up GPIO.
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(BUTTON_PIN, GPIO.IN)
+#     # Set up GPIO.
+#     GPIO.setmode(GPIO.BCM)
+#     GPIO.setup(BUTTON_PIN, GPIO.IN)
 
-    def phone_picked_up() -> bool:
-        """
-        Check whether the phone is picked up.
+#     def phone_picked_up() -> bool:
+#         """
+#         Check whether the phone is picked up.
 
-        Returns
-        -------
-        bool
-            Returns True if the button is pressed, otherwise False.
-        """
-        if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-            return True
+#         Returns
+#         -------
+#         bool
+#             Returns True if the button is pressed, otherwise False.
+#         """
+#         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+#             return True
 
-        else:
-            return False
+#         else:
+#             return False
 
 # If testing on MacBook
 elif platform.system() == "Darwin":
