@@ -133,12 +133,12 @@ def ignored_phrases(text : str) -> bool:
     print(f"$$$${text}$$$$")
 
     # Check whether the entire input is bad.
-    if text in ("", " ", None, "huh", False):
-        return False
+    if not text or text.lower() in ("", " ", "huh"):
+        return True
 
     # Check if there are banned words.
     banned_words = "fuck shit ass piss rape nigger bitch cunt pussy nazi jerk dumb".split(" ")
     if any(word in text.lower() for word in banned_words):
-        return False
+        return True
     
-    return True
+    return False

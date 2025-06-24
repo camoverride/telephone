@@ -44,7 +44,7 @@ def main():
             if SILENCED:
                 continue
 
-
+            # Check if the audio input should be ignored (empty, contains profanity, etc.)
             if ignored_phrases(input_text):
                 print("Text contains an ignored phrase!")
 
