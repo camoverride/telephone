@@ -41,7 +41,9 @@ Create markov models:
 
 ## Test
 
-- `python run_chatbot.py`
+Suppress annoying debug:
+
+- `python run_chatbot.py 2>/dev/null`
 
 
 ## Run in Production

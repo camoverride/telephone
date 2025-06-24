@@ -5,7 +5,7 @@ recording_duration: 5
 speech_to_text_model: vosk
 
 # Response model options: `echo`, `random_markov`.
-response_model: random_markov
+response_model: echo
 
 # TTS model options: `command_line`, `google_tts`.
 text_to_speech_model: google_tts
