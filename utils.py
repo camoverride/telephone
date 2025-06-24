@@ -114,3 +114,30 @@ def play_audio(filename : str) -> None:
     # The system is not recognized.
     else:
         raise RuntimeError("Unsupported OS for audio playback")
+
+
+def ignored_phrases(text : str) -> bool:
+    """
+    Returns True if the text should be ignored and bypassed.
+
+    Parameters
+    ----------
+    text : str
+        Some text that may contain stuff we don't want.
+
+    Returns
+    -------
+    bool
+        False if bad text, otherwise True
+    """
+
+    # Check whether the entire input is bad.
+    if text in ("", " ", None, "huh"):
+        return False
+
+    # Check if there are banned words.
+    banned_words = "fuck shit ass piss rape nigger bitch cunt pussy nazi jerk dumb".split(" ")
+    if any(word in text.lower() for word in banned_words):
+        return False
+    
+    return True

@@ -3,7 +3,7 @@ import yaml
 from _speech_to_text import speech_to_text
 from _response import get_response
 from _text_to_speech import text_to_speech
-from utils import phone_picked_up, record_audio, play_audio
+from utils import phone_picked_up, ignored_phrases, record_audio, play_audio
 
 
 
@@ -16,6 +16,7 @@ SILENCED = False
 
 
 def main():
+    global SILENCED
 
     while True:
 
@@ -44,9 +45,8 @@ def main():
                 continue
 
 
-            if input_text in ("", " ", None, "huh"):
-                # TODO  - add ignored phrases
-                print("Nothing recognized!")
+            if ignored_phrases(input_text):
+                print("Text contains an ignored phrase!")
 
                 continue
 
