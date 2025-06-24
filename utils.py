@@ -4,6 +4,7 @@ import subprocess
 import platform
 
 
+
 # if platform.system() == "Linux":
 #     import RPi.GPIO as GPIO
 
@@ -116,6 +117,10 @@ def play_audio(filename : str) -> None:
         raise RuntimeError("Unsupported OS for audio playback")
 
 
+# Read all the banned words into a list.
+with open("banned_words.txt", "r") as f:
+    BANNED_WORDS = [line.rstrip('\n') for line in f]
+
 def ignored_phrases(text : str) -> bool:
     """
     Returns True if the text should be ignored and bypassed.
@@ -130,15 +135,12 @@ def ignored_phrases(text : str) -> bool:
     bool
         False if bad text, otherwise True
     """
-    print(f"$$$${text}$$$$")
-
     # Check whether the entire input is bad.
-    if not text or text.lower() in ("", " ", "huh"):
+    if not text or text.lower() in ("", " ", "huh", "hi"):
         return True
 
     # Check if there are banned words.
-    banned_words = "fuck shit ass piss rape nigger bitch cunt pussy nazi jerk dumb".split(" ")
-    if any(word in text.lower() for word in banned_words):
+    if any(word in text.lower() for word in BANNED_WORDS):
         return True
     
     return False
