@@ -29,10 +29,10 @@ import platform
 #         else:
 #             return False
 
-# If testing on MacBook
-elif platform.system() == "Darwin":
-    def phone_picked_up():
-        return True
+# # If testing on MacBook
+# elif platform.system() == "Darwin":
+#     def phone_picked_up():
+#         return True
 
 
 
