@@ -130,9 +130,10 @@ def ignored_phrases(text : str) -> bool:
     bool
         False if bad text, otherwise True
     """
+    print(f"$$$${text}$$$$")
 
     # Check whether the entire input is bad.
-    if text in ("", " ", None, "huh"):
+    if text in ("", " ", None, "huh", False):
         return False
 
     # Check if there are banned words.
