@@ -14,7 +14,17 @@ See [the wiki](https://github.com/camoverride/telephone/wiki)
 - `cd telephone`
 - `python3 -m venv .venv`
 - `source .venv/bin/activate`
-- `pip install -r requirements.txt`
+
+If MacOS:
+
+- `pip install -r requirements_macos.txt`
+
+If Raspberry Pi:
+
+- `sudo apt-get update`
+- `sudo apt-get install -y portaudio19-dev`
+- `pip install -r requirements_pi.txt`
+
 
 Get vosk model:
 
@@ -26,11 +36,12 @@ Create markov models:
 
 - `cd models/markov`
 - `python _train_markov_model.py`
+- `cd ../..`
 
 
 ## Test
 
-- `python local_bot.py`
+- `python run_chatbot.py`
 
 
 ## Run in Production
