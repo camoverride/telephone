@@ -1,5 +1,5 @@
 [Unit]
-Description=run chatbot service
+Description=run telephone chatbot service
 After=default.target
 
 [Service]

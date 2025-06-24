@@ -51,17 +51,17 @@ Suppress annoying debug:
 Start a service with *systemd*. This will start the program when the computer starts and revive it when it dies. It expects that the username is `pi`:
 
 - `mkdir -p ~/.config/systemd/user`
-- `cat display.service > ~/.config/systemd/user/display.service`
+- `cat telephone.service > ~/.config/systemd/user/telephone.service`
 
 Start the service using the commands below:
 
 - `systemctl --user daemon-reload`
-- `systemctl --user enable display.service`
-- `systemctl --user start display.service`
+- `systemctl --user enable telephone.service`
+- `systemctl --user start telephone.service`
 
 Start it on boot: `sudo loginctl enable-linger pi`
 
-Get the logs: `journalctl --user -u display.service`
+Get the logs: `journalctl --user -u telephone.service`
 
 
 ## Increase System Longevity
