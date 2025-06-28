@@ -1,5 +1,5 @@
 # How long to record a chunk. 5 seconds is good for Pi 5.
-recording_duration: 5
+recording_max_duration: 60
 
 # ASR model options: `vosk`.
 speech_to_text_model: vosk

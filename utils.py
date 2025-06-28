@@ -1,7 +1,10 @@
+import collections
 import pyaudio
 import wave
 import subprocess
 import platform
+import webrtcvad
+import time
 
 # System-dependent import.
 if platform.system() == "Linux":
@@ -27,53 +30,76 @@ def phone_picked_up():
         return button.is_pressed
 
 
-def record_audio(save_filepath : str,
-                 duration : int) -> str:
+def record_audio(save_filepath: str,
+                 max_duration: int) -> str:
     """
-    Records audio and saves it to a .wav file.
+    Records audio and saves it to a .wav file, stopping when
+    speech ends or max_duration is reached.
 
     Parameters
     ----------
     save_filepath : str
         Where the resulting .wav file will be saved.
-    duration : int
-        The duration of the recording, in seconds.
+    max_duration : int
+        Maximum duration of the recording, in seconds.
 
     Returns
     -------
     str
-        A copy of `save_filepath`
+        The filepath of the saved audio.
     """
-    # NOTE: `rate` should always be 16000
     rate = 16000
+    frame_duration_ms = 30  # Duration of a single frame in milliseconds
+    frame_size = int(rate * frame_duration_ms / 1000)  # Number of samples per frame
+    frame_bytes = frame_size * 2  # 2 bytes per sample (16-bit audio)
+    silence_timeout = 1  # Stop if silence for 1 second
 
-    # Record audio.
+    vad = webrtcvad.Vad()
+    vad.set_mode(2)  # 0=aggressive, 3=very aggressive
+
     p = pyaudio.PyAudio()
 
     stream = p.open(format=pyaudio.paInt16,
                     channels=1,
                     rate=rate,
                     input=True,
-                    frames_per_buffer=1024)
+                    frames_per_buffer=frame_size)
 
     frames = []
+    ring_buffer = collections.deque(maxlen=int(silence_timeout * 1000 / frame_duration_ms))
 
-    for _ in range(0, int(rate / 1024 * duration)):
-        data = stream.read(1024, exception_on_overflow=False)
-        frames.append(data)
+    start_time = time.time()
+    speech_detected = False
 
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+    try:
+        while True:
+            now = time.time()
+            if now - start_time > max_duration:
+                break
 
-    # Write to file.
+            data = stream.read(frame_size, exception_on_overflow=False)
+            is_speech = vad.is_speech(data, rate)
+
+            frames.append(data)
+            ring_buffer.append(is_speech)
+
+            if is_speech:
+                speech_detected = True
+
+            if speech_detected and not any(ring_buffer):
+                # We heard speech earlier, but now it's been silent for a while
+                break
+    finally:
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
     with wave.open(save_filepath, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(p.get_sample_size(pyaudio.paInt16))
         wf.setframerate(rate)
         wf.writeframes(b''.join(frames))
 
-    # Return is not strictly necessary, because it copies one of the args.
     return save_filepath
 
 
