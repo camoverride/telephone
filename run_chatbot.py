@@ -41,6 +41,7 @@ def main():
             if input_text == "continue":
                 SILENCED = False
 
+            # Periodically check if the phone has been hung up.
             if SILENCED:
                 continue
 
@@ -52,6 +53,10 @@ def main():
 
             else:
                 print(f"Recognized text :  {input_text}")
+            
+            # Periodically check if the phone has been hung up.
+            if SILENCED:
+                continue
 
 
             # Response generation.
@@ -59,6 +64,10 @@ def main():
                                         model=config["response_model"])
             
             print(f"Generated response text : {response_text}")
+
+            # Periodically check if the phone has been hung up.
+            if SILENCED:
+                continue
             
 
             # Text to speech.
@@ -67,6 +76,10 @@ def main():
                                                 model=config["text_to_speech_model"])
             
             print(f"Saved output text : {audio_output_filepath}")
+
+            # Periodically check if the phone has been hung up.
+            if SILENCED:
+                continue
 
             # Play audio!
             play_audio(filename=audio_output_filepath)

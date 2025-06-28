@@ -3,41 +3,29 @@ import wave
 import subprocess
 import platform
 
+# System-dependent import.
+if platform.system() == "Linux":
+    from gpiozero import Button
 
 
-# if platform.system() == "Linux":
-#     import RPi.GPIO as GPIO
-
-#     # Choose the pin. GPIO 17, physical pin 11.
-#     BUTTON_PIN = 17
-
-#     # Set up GPIO.
-#     GPIO.setmode(GPIO.BCM)
-#     GPIO.setup(BUTTON_PIN, GPIO.IN)
-
-#     def phone_picked_up() -> bool:
-#         """
-#         Check whether the phone is picked up.
-
-#         Returns
-#         -------
-#         bool
-#             Returns True if the button is pressed, otherwise False.
-#         """
-#         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-#             return True
-
-#         else:
-#             return False
-
-# # If testing on MacBook
-# elif platform.system() == "Darwin":
-#     def phone_picked_up():
-#         return True
 
 def phone_picked_up():
-    return True
+    """
+    Returns True if the phone is picked up, otherwise False.
 
+    NOTE: when the phone is picked up, the circuit is completed.
+    When the phone is placed down, the circuit disconnects.
+
+    NOTE: on MacOS, always returns True.
+    """
+    if platform.system() == "Darwin":
+        return True
+    
+    elif platform.system() == "Linux":
+        # Use GPIO17 with 50ms debounce
+        button = Button(17, bounce_time=0.05)
+
+        return button.is_pressed
 
 
 def record_audio(save_filepath : str,
