@@ -82,9 +82,9 @@ Follow these steps in order:
 
 Important:
 
+- [ ] reject ASR if it doesn't meet a confidence level.
 - [ ] set up additional response models (conditioned markov, llama, tiny-llama [local])
 - [ ] set up additional synthesis model (piper-tts)
-- [X] set up lever-press GPIO start.
 - [ ] research [this repo](https://github.com/heristop/gutenku) for haiku model
 
 Less important:
@@ -93,3 +93,4 @@ Less important:
 - [ ] remove ephemeral files to allow Read-Only FS
 - [ ] vosk model seems to work fine, but potentially set up Whisper too.
 - [ ] google works fine, but potentially set up additional TTS models
+- [ ] generic longevity tips

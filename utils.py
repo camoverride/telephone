@@ -9,7 +9,8 @@ import time
 
 
 def play_prompt(prompt_start_delay : int,
-                prompt_path : str):
+                prompt_path : str,
+                prompt_closing_sound : str):
     """
     Plays a prompt at the beginning of the conversation following a delay.
 
@@ -19,6 +20,8 @@ def play_prompt(prompt_start_delay : int,
         How long after the reciever is picked up should the propt play.
     prompt_path : str
         The location of the prompt file (wav)
+    prompt_closing_sound : str or None
+        The sound that gets played after a prompt.
     
     Returns
     -------
@@ -31,10 +34,18 @@ def play_prompt(prompt_start_delay : int,
     # Use afplay for MacOS.
     if platform.system() == "Darwin":
         subprocess.run(["afplay", prompt_path])
+
+        if prompt_closing_sound:
+            subprocess.run(["afplay", prompt_closing_sound])
+
     
     # Use aplay for Raspberry Pi audio playback (Linux)
     elif platform.system() == "Linux":
         subprocess.run(["ffplay", "-autoexit", prompt_path])
+
+        if prompt_closing_sound:
+            subprocess.run(["ffplay", "-autoexit", prompt_closing_sound])
+
     
     # The system is not recognized.
     else:
