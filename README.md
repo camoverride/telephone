@@ -12,15 +12,17 @@ See [the wiki](https://github.com/camoverride/telephone/wiki)
 
 - `git clone git@github.com:camoverride/telephone.git`
 - `cd telephone`
-- `python3 -m venv .venv`
-- `source .venv/bin/activate`
 
 If MacOS:
 
 - `pip install -r requirements_macos.txt`
+- `python3 -m venv .venv`
+- `source .venv/bin/activate`
 
 If Raspberry Pi:
 
+- `python3 -m venv .venv --system-site-packages`
+- `source .venv/bin/activate`
 - `sudo apt-get update`
 - `sudo apt-get install -y portaudio19-dev`
 - `pip install -r requirements_pi.txt`
@@ -40,8 +42,6 @@ Create markov models:
 
 
 ## Test
-
-Suppress annoying debug:
 
 - `python run_chatbot.py 2>/dev/null`
 
@@ -84,7 +84,7 @@ Important:
 
 - [ ] set up additional response models (conditioned markov, llama, tiny-llama [local])
 - [ ] set up additional synthesis model (piper-tts)
-- [ ] set up lever-press GPIO start (with exeternal pull up/down resistor?)
+- [X] set up lever-press GPIO start.
 - [ ] research [this repo](https://github.com/heristop/gutenku) for haiku model
 
 Less important:
