@@ -71,6 +71,7 @@ def command_line_say(text : str,
     # Linux / Pi
     elif platform.system() == "Linux":
         # Use pyttsx3 to save speech to file
+        # NOTE: should use "espeak" instead
         engine = pyttsx3.init()
         engine.save_to_file(text, output_audio_path)
         engine.runAndWait()
