@@ -22,7 +22,7 @@ def main():
                                                 max_duration=\
                                                     config["recording_max_duration"])
 
-            print(f"Saved {config['recording_duration']} seconds of audio to : \
+            print(f"Saved audio to : \
                 {audio_input_filepath}")
             
         else:
