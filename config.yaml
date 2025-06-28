@@ -1,5 +1,5 @@
 # When the phone is picked up, this audio plays after a certai delay
-prompt_start_delay: 2
+prompt_start_delay: 1
 starting_audio_prompt: prompts/cameron_says_hello.wav
 
 # Max length for a recording.
