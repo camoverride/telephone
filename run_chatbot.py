@@ -20,72 +20,63 @@ def main():
 
     while True:
 
+        # Audio recording.
         if phone_picked_up():
-
-            # Audio recording.
             audio_input_filepath = record_audio(save_filepath="_input_tmp.wav",
                                                 duration=config["recording_duration"])
 
             print(f"Saved {config['recording_duration']} seconds of audio to : \
                 {audio_input_filepath}")
+            
+        else:
+            continue
 
 
-            # Speech to text.
+        # Speech to text.
+        if phone_picked_up():
             input_text = speech_to_text(audio_file_path=audio_input_filepath,
                                         model=config["speech_to_text_model"])
             
-            # Check for silencing.
-            if input_text == "silence":
-                SILENCED = True
-            
-            if input_text == "continue":
-                SILENCED = False
-
-            # Periodically check if the phone has been hung up.
-            if SILENCED:
-                continue
-
             # Check if the audio input should be ignored (empty, contains profanity, etc.)
             if ignored_phrases(input_text):
                 print("Text contains an ignored phrase!")
-
                 continue
 
             else:
                 print(f"Recognized text :  {input_text}")
-            
-            # Periodically check if the phone has been hung up.
-            if SILENCED:
-                continue
+        
+        else:
+            continue
 
 
-            # Response generation.
+        # Response generation.
+        if phone_picked_up():
             response_text = get_response(text=input_text,
                                         model=config["response_model"])
             
             print(f"Generated response text : {response_text}")
+        
+        else:
+            continue
 
-            # Periodically check if the phone has been hung up.
-            if SILENCED:
-                continue
-            
 
-            # Text to speech.
+        # Text to speech.
+        if phone_picked_up():
             audio_output_filepath = text_to_speech(text=response_text,
                                                 output_audio_path="_output_tmp.wav",
                                                 model=config["text_to_speech_model"])
             
             print(f"Saved output text : {audio_output_filepath}")
-
-            # Periodically check if the phone has been hung up.
-            if SILENCED:
-                continue
-
-            # Play audio!
-            play_audio(filename=audio_output_filepath)
-    
         else:
-            time.sleep(0.5)
+            continue
+
+
+        # Play audio!
+        if phone_picked_up():
+            play_audio(filename=audio_output_filepath)
+
+        else:
+            continue
 
 
 
