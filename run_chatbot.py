@@ -1,4 +1,3 @@
-import time
 import yaml
 from _speech_to_text import speech_to_text
 from _response import get_response

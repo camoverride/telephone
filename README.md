@@ -59,9 +59,18 @@ Start the service using the commands below:
 - `systemctl --user enable telephone.service`
 - `systemctl --user start telephone.service`
 
-Start it on boot: `sudo loginctl enable-linger pi`
+Start it on boot:
 
-Get the logs: `journalctl --user -u telephone.service`
+- `sudo loginctl enable-linger pi`
+
+Get the status:
+
+- `systemctl --user status telephone.service`
+
+
+Get the logs:
+
+- `journalctl --user -u telephone.service`
 
 
 ## Increase System Longevity
@@ -89,7 +98,8 @@ Important:
 
 Less important:
 
-- [ ] suppress annying vox logs
+- [ ] convert `print` to `logging`
+- [ ] suppress annying vox logs (only relevant for local testing, these are not logged)
 - [ ] remove ephemeral files to allow Read-Only FS
 - [ ] vosk model seems to work fine, but potentially set up Whisper too.
 - [ ] google works fine, but potentially set up additional TTS models
