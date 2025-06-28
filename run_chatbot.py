@@ -3,7 +3,8 @@ import yaml
 from _speech_to_text import speech_to_text
 from _response import get_response
 from _text_to_speech import text_to_speech
-from utils import phone_picked_up, ignored_phrases, record_audio, play_audio
+from utils import play_prompt, phone_picked_up, ignored_phrases, \
+    record_audio, play_audio
 
 
 
@@ -15,6 +16,14 @@ with open("config.yaml", "r") as f:
 def main():
 
     while True:
+        # Play prompt
+        if phone_picked_up():
+            play_prompt(prompt_start_delay=config["prompt_start_delay"],
+                        prompt_path=config["starting_audio_prompt"])
+        
+        else:
+            continue
+
 
         # Audio recording.
         if phone_picked_up():
