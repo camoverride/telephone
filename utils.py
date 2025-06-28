@@ -7,6 +7,8 @@ import platform
 if platform.system() == "Linux":
     from gpiozero import Button
 
+    # GPIO 17 with 50ms debounce time.
+    button = Button(17, bounce_time=0.05)
 
 
 def phone_picked_up():
@@ -20,11 +22,8 @@ def phone_picked_up():
     """
     if platform.system() == "Darwin":
         return True
-    
-    elif platform.system() == "Linux":
-        # Use GPIO17 with 50ms debounce
-        button = Button(17, bounce_time=0.05)
 
+    elif platform.system() == "Linux":
         return button.is_pressed
 
 

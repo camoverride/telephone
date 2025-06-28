@@ -12,11 +12,7 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-SILENCED = False
-
-
 def main():
-    global SILENCED
 
     while True:
 
