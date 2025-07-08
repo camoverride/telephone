@@ -10,9 +10,68 @@ import webrtcvad
 
 
 
+# System-dependent import.
+if platform.system() == "Linux":
+    from gpiozero import Button # type: ignore
+
+    # GPIO 17 with 50ms debounce time.
+    button = Button(17, bounce_time=0.05)
+
+
+def phone_picked_up() -> None:
+    """
+    Returns True if the phone is picked up, otherwise False.
+
+    NOTE: when the phone is picked up, the circuit is completed.
+    When the phone is placed down, the circuit disconnects.
+
+    NOTE: on MacOS, always returns True.
+    """
+    if platform.system() == "Darwin":
+        return True
+
+    elif platform.system() == "Linux":
+        return button.is_pressed
+
+
+def play_audio_interruptible(filepath : str) -> None:
+    """
+    Plays an audio file asynchronously using subprocess.Popen.
+    Waits for the file to complete playing before moving on.
+    If the phone is put down, the audio is killed and this
+    function completed.
+    """
+    # Use afplay for MacOS.
+    if platform.system() == "Darwin":
+        process = subprocess.Popen(["afplay", filepath])
+
+    # Use aplay for Raspberry Pi audio playback (Linux)
+    elif platform.system() == "Linux":
+        process = subprocess.Popen(
+            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filepath],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+    else:
+        raise RuntimeError("Unsupported OS for audio playback")
+
+    # If the phone is picked up, kill the process playing audio.
+    try:
+        while process.poll() is None:
+            if not phone_picked_up():
+                process.terminate()
+                break
+            time.sleep(0.1)
+
+    except Exception:
+        process.terminate()
+        raise
+
+
 def play_prompt(prompt_start_delay : int,
                 starting_audio_prompt_dir : str,
-                prompt_closing_sound : str):
+                prompt_closing_sound : str) -> None:
     """
     Plays a prompt at the beginning of the conversation following a delay.
 
@@ -39,48 +98,12 @@ def play_prompt(prompt_start_delay : int,
     prompt_path = os.path.join(starting_audio_prompt_dir, 
                                random.choice(prompt_files))
 
-    # Use afplay for MacOS.
-    if platform.system() == "Darwin":
-        subprocess.run(["afplay", prompt_path])
+    # Play prompt.
+    play_audio_interruptible(prompt_path)
 
-        if prompt_closing_sound:
-            subprocess.run(["afplay", prompt_closing_sound])
-
-    
-    # Use aplay for Raspberry Pi audio playback (Linux)
-    elif platform.system() == "Linux":
-        subprocess.run(["ffplay", "-autoexit", prompt_path])
-
-        if prompt_closing_sound:
-            subprocess.run(["ffplay", "-autoexit", prompt_closing_sound])
-
-    
-    # The system is not recognized.
-    else:
-        raise RuntimeError("Unsupported OS for audio playback")
-
-
-# System-dependent import.
-if platform.system() == "Linux":
-    from gpiozero import Button # type: ignore
-
-    # GPIO 17 with 50ms debounce time.
-    button = Button(17, bounce_time=0.05)
-
-def phone_picked_up():
-    """
-    Returns True if the phone is picked up, otherwise False.
-
-    NOTE: when the phone is picked up, the circuit is completed.
-    When the phone is placed down, the circuit disconnects.
-
-    NOTE: on MacOS, always returns True.
-    """
-    if platform.system() == "Darwin":
-        return True
-
-    elif platform.system() == "Linux":
-        return button.is_pressed
+    # Play closing sound, only if phone is still up.
+    if prompt_closing_sound and phone_picked_up():
+        play_audio_interruptible(prompt_closing_sound)
 
 
 def record_audio(save_filepath: str,
