@@ -6,14 +6,17 @@ prompt_closing_sound: prompts/beep.wav
 # Max length for a recording.
 recording_max_duration: 60
 
-# Canned replies
-
-
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
 
-# Response model options: `echo`, `random_markov`.
-response_model: echo
+# Response model options: `echo`, `random_markov`, `tiny_llama`.
+response_model: tiny_llama
+
+# System prompt (only applicable for LLM models like `tiny-llama`.
+# NOTE: The character sequence `XXX` is where the user input gets added.
+#system_prompt: "Please generate a short 3-7-3 haiku based off the following text: XXX"
+
+api_url: "http://100.116.247.74:5000/generate"
 
 # TTS model options: `command_line`, `google_tts`.
 text_to_speech_model: google_tts

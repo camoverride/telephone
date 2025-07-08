@@ -1,5 +1,37 @@
+import requests
+import yaml
 from models.markov._train_markov_model import load_model, generate_text
 
+
+
+# Load config file
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+
+
+def tiny_llama_model(text: str) -> str:
+    """
+    
+    """
+    system_prompt = config["system_prompt"] # not yet implementes
+    full_prompt = f"Human: {text} Assistant:"
+
+    # Hit the API endpoint.
+    response = requests.post(url=config["api_url"],
+                            json={"prompt": full_prompt},
+                            headers={"Content-Type": "application/json"})
+
+    # Check the server's response.
+    if response.ok:
+        print("LLM Reply: ", response.json()["reply"])
+
+        return response.json()["reply"]
+
+    else:
+        print("Error:", response.status_code, response.text)
+
+        return "Model offline!"
 
 
 def random_markov_model(length : int,
@@ -48,9 +80,11 @@ def get_response(text : str,
         Which model to use. Current models:
             - "echo"
                 Repeats back the input text.
-            - "random markov"
+            - "random_markov"
                 Random text from a trained markov model.
-    
+            - "tiny_llama"
+                A small LLM
+
     Returns
     ------
     str
@@ -58,11 +92,15 @@ def get_response(text : str,
     """
     if model == "echo":
         return text
-    
+
     if model == "random_markov":
-        text = random_markov_model(length=30,
+        response = random_markov_model(length=30,
                                    start_word="the",
                                    model_path="models/markov/_random_poems_model.pkl")
-    
-        return text
-        
+
+        return response
+
+    if model == "tiny_llama":
+        response = tiny_llama_model(text=text)
+
+        return response
