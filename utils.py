@@ -54,7 +54,7 @@ def play_prompt(prompt_start_delay : int,
 
 # System-dependent import.
 if platform.system() == "Linux":
-    from gpiozero import Button
+    from gpiozero import Button # type: ignore
 
     # GPIO 17 with 50ms debounce time.
     button = Button(17, bounce_time=0.05)
