@@ -45,9 +45,28 @@ def main():
             
             # Check if the audio input should be ignored (empty, contains profanity, etc.)
             if ignored_phrases(input_text):
-                print("Text contains an ignored phrase!")
-                continue
 
+                if ignored_phrases == "hello":
+                    print(f"Recognized text :  {input_text}")
+                    print("IGNORING - hello message.")
+
+                    continue
+
+                if ignored_phrases == "nothing":
+                    print(f"Recognized text :  {input_text}")
+                    print("IGNORING - nothing recognized.")
+
+                    continue
+
+                if ignored_phrases == "profanity":
+                    print(f"Recognized text :  {input_text}")
+                    print("IGNORING - contains profanity.")
+
+                    continue
+
+
+                continue
+            
             else:
                 print(f"Recognized text :  {input_text}")
         

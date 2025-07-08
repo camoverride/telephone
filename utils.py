@@ -190,15 +190,23 @@ def ignored_phrases(text : str) -> bool:
 
     Returns
     -------
-    bool
-        False if bad text, otherwise True
+    bool or str
+        False if bad text, otherwise a str
+        - "hello" - the person just said "hi"
+        - "nothing" - the person didn't say anything
+        - "profanity" - the person used profanity.
     """
     # Check whether the entire input is bad.
-    if not text or text.lower() in ("", " ", "huh", "hi"):
-        return True
+    if text.lower() in ("huh", "hi", "hello", "sup",
+                        "what's up", "greetings", "hi there",
+                        "hello there"):
+        return "hello"
+    
+    if not text or text.lower() in ("", " ", "huh", "what", "um"):
+        return "nothing"
 
     # Check if there are banned words.
     if any(word in text.lower() for word in BANNED_WORDS):
-        return True
+        return "profanity"
     
     return False
