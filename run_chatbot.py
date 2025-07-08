@@ -104,6 +104,7 @@ def main():
         else:
             continue
 
+        # Small pause to prevent overheating and CPU from running too often.
         time.sleep(0.1)
 
 
