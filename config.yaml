@@ -1,10 +1,13 @@
 # When the phone is picked up, this audio plays after a certain delay, followed by a beep.
 prompt_start_delay: 1
-starting_audio_prompt: prompts/cameron_says_hello.wav
+starting_audio_prompt_dir: prompts/beauty
 prompt_closing_sound: prompts/beep.wav
 
 # Max length for a recording.
 recording_max_duration: 60
+
+# Canned replies
+
 
 # ASR model options: `vosk`.
 speech_to_text_model: vosk

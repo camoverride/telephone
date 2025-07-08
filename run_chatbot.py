@@ -18,7 +18,7 @@ def main():
         # Play prompt
         if phone_picked_up():
             play_prompt(prompt_start_delay=config["prompt_start_delay"],
-                        prompt_path=config["starting_audio_prompt"],
+                        starting_audio_prompt_dir=config["starting_audio_prompt_dir"],
                         prompt_closing_sound=config["prompt_closing_sound"])
         
         else:

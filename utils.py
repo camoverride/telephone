@@ -1,15 +1,17 @@
 import collections
-import pyaudio
-import wave
-import subprocess
+import os
 import platform
-import webrtcvad
+import pyaudio
+import random
+import subprocess
 import time
+import wave
+import webrtcvad
 
 
 
 def play_prompt(prompt_start_delay : int,
-                prompt_path : str,
+                starting_audio_prompt_dir : str,
                 prompt_closing_sound : str):
     """
     Plays a prompt at the beginning of the conversation following a delay.
@@ -18,8 +20,8 @@ def play_prompt(prompt_start_delay : int,
     ----------
     prompt_start_delay : int
         How long after the reciever is picked up should the propt play.
-    prompt_path : str
-        The location of the prompt file (wav)
+    starting_audio_prompt_dir : str
+        The location of the dir containing prompt files (wav)
     prompt_closing_sound : str or None
         The sound that gets played after a prompt.
     
@@ -30,6 +32,12 @@ def play_prompt(prompt_start_delay : int,
     """
     # Delay before prompt
     time.sleep(prompt_start_delay)
+
+    # Randomly select a prompt from the dir
+    prompt_files = [f for f in os.listdir(starting_audio_prompt_dir) \
+                    if f.lower().endswith(".wav")]
+    prompt_path = os.path.join(starting_audio_prompt_dir, 
+                               random.choice(prompt_files))
 
     # Use afplay for MacOS.
     if platform.system() == "Darwin":

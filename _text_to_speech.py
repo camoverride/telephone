@@ -111,3 +111,11 @@ def text_to_speech(text : str,
 
     # Return is not strictly necessary, because it copies one of the args.
     return output_audio_path
+
+
+
+if __name__ == "__main__":
+
+    TEXT = "Thanks for picking up. Tell me something about truth, and I'll respond with a haiku."
+
+    google_asr(text=TEXT, output_audio_path="_tmp.wav")
