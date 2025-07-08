@@ -14,7 +14,7 @@ def tiny_llama_model(text: str) -> str:
     """
     
     """
-    system_prompt = config["system_prompt"] # not yet implementes
+    # system_prompt = config["system_prompt"] # not yet implemented
     full_prompt = f"Human: {text} Assistant:"
 
     # Hit the API endpoint.
