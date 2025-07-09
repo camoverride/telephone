@@ -255,7 +255,8 @@ def ignored_phrases(text : str) -> bool:
     return False
 
 
-def print_text(text : str, printer_api: str) -> None:
+def print_text(text : str,
+               printer_api: str) -> None:
     """
     Sends some text to a thermal printer to be printed out.
 
@@ -271,6 +272,7 @@ def print_text(text : str, printer_api: str) -> None:
     None
         Prints text.
     """
+    print(f"Printing this: {text}")
     data = {"text": text}
 
     response = requests.post(printer_api, json=data)

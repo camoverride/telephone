@@ -78,7 +78,7 @@ def main():
         # Response generation.
         if phone_picked_up():
             response_text = get_response(text=input_text,
-                                        model=config["response_model"])
+                                         model=config["response_model"])
             
             print(f"Generated response text : {response_text}")
         
