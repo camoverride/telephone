@@ -4,7 +4,7 @@ from _speech_to_text import speech_to_text
 from _response import get_response
 from _text_to_speech import text_to_speech
 from utils import play_prompt, phone_picked_up, ignored_phrases, \
-    record_audio, play_audio
+    record_audio, play_audio, print_text
 
 
 
@@ -104,8 +104,12 @@ def main():
         else:
             continue
 
+        # Print the resulting text
+        print_text(text=response_text, printer_api=config["printer_server_url"])
+        print("Printing the text")
+
         # Small pause to prevent overheating and CPU from running too often.
-        time.sleep(0.1)
+        time.sleep(0.5)
 
 
 
