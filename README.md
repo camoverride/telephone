@@ -96,6 +96,9 @@ Follow these steps in order:
 Important:
 
 - [X] set up additional response models (conditioned markov, llama, tiny-llama [local])
+- [ ] add better instructions
+- [ ] make haiku continue printing even if hung up
+- [ ] add gong sound while waiting
 - [ ] set up additional synthesis model (piper-tts)
 - [ ] stop speech synthesis if phone is hung up (see `utils.py: play_audio_interruptible`)
 - [ ] more elegant beginning prompt

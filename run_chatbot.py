@@ -103,8 +103,8 @@ def main():
             if phone_picked_up():
                 play_audio(filename=audio_output_filepath)
 
-            else:
-                continue
+            # else:
+            #     continue
 
             # Print the resulting text
             print_text(text=response_text, printer_api=config["printer_server_url"])
