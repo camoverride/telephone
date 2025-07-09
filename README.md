@@ -89,23 +89,24 @@ Follow these steps in order:
 ## Notes & Todo's
 
 - ASR: Vosk seems adequte, as people are speaking very close to the mic.
+- Response: `vector_quotes` and `deepseek` work well.
 - TTS: I like the google voice model.
-- Response: tiny-llama should be OK!
 
 
 Important:
 
-- [ ] reject ASR if it doesn't meet a confidence level.
-- [ ] set up additional response models (conditioned markov, llama, tiny-llama [local])
+- [X] set up additional response models (conditioned markov, llama, tiny-llama [local])
 - [ ] set up additional synthesis model (piper-tts)
-- [ ] research [this repo](https://github.com/heristop/gutenku) for haiku model
+- [ ] stop speech synthesis if phone is hung up (see `utils.py: play_audio_interruptible`)
+- [ ] more elegant beginning prompt
+- [ ] deepseek chat mode (with memory)
 
 Less important:
 
+- [ ] reject ASR if it doesn't meet a confidence level.
 - [ ] convert `print` to `logging`
 - [ ] suppress annying vox logs (only relevant for local testing, these are not logged)
 - [ ] remove ephemeral files to allow Read-Only FS
 - [ ] vosk model seems to work fine, but potentially set up Whisper too.
-- [ ] google works fine, but potentially set up additional TTS models
 - [ ] generic longevity tips
 - [ ] double check requirements
