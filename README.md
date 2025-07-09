@@ -40,6 +40,8 @@ Create markov models:
 - `python _train_markov_model.py`
 - `cd ../..`
 
+If using the deepseek model, you must have your API key inside a single-line file named `deepseek_api_key.txt`
+
 
 ## Test
 
