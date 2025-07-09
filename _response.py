@@ -91,7 +91,6 @@ def jason_frontend(text : str) -> str:
 
     response = requests.post(config["jason_url"], headers=headers, json=data)
     response.raise_for_status()
-    print(response.json())
     result = response.json()
 
     return result['user_response']['content']
