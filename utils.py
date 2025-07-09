@@ -18,6 +18,13 @@ if platform.system() == "Linux":
     button = Button(17, bounce_time=0.05)
 
 
+# Voice activity detection. 0=aggressive, 3=very aggressive.
+vad = webrtcvad.Vad()
+vad.set_mode(2)
+P = pyaudio.PyAudio()
+
+
+
 def phone_picked_up() -> None:
     """
     Returns True if the phone is picked up, otherwise False.
@@ -125,17 +132,21 @@ def record_audio(save_filepath: str,
         The filepath of the saved audio.
     """
     rate = 16000
-    frame_duration_ms = 30  # Duration of a single frame in milliseconds
-    frame_size = int(rate * frame_duration_ms / 1000)  # Number of samples per frame
-    frame_bytes = frame_size * 2  # 2 bytes per sample (16-bit audio)
-    silence_timeout = 1  # Stop if silence for 1 second
 
-    vad = webrtcvad.Vad()
-    vad.set_mode(2)  # 0=aggressive, 3=very aggressive
+    # Duration of a single frame in milliseconds
+    frame_duration_ms = 30
 
-    p = pyaudio.PyAudio()
+    # Number of samples per frame
+    frame_size = int(rate * frame_duration_ms / 1000)
 
-    stream = p.open(format=pyaudio.paInt16,
+    # 2 bytes per sample (16-bit audio)
+    frame_bytes = frame_size * 2
+
+    # Stop if silence for 1 second
+    silence_timeout = 1
+
+    # Open audio stream, defined globally
+    stream = P.open(format=pyaudio.paInt16,
                     channels=1,
                     rate=rate,
                     input=True,
@@ -168,11 +179,11 @@ def record_audio(save_filepath: str,
     finally:
         stream.stop_stream()
         stream.close()
-        p.terminate()
+        P.terminate()
 
     with wave.open(save_filepath, "wb") as wf:
         wf.setnchannels(1)
-        wf.setsampwidth(p.get_sample_size(pyaudio.paInt16))
+        wf.setsampwidth(P.get_sample_size(pyaudio.paInt16))
         wf.setframerate(rate)
         wf.writeframes(b''.join(frames))
 
