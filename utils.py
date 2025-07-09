@@ -272,6 +272,7 @@ def print_text(text : str,
     None
         Prints text.
     """
+    text = "hello world this is a test"
     print(f"Printing this: {text}")
     data = {"text": text}
 
