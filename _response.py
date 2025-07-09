@@ -1,7 +1,11 @@
+import numpy as np
 from openai import OpenAI
 import requests
+import sqlite3
 import yaml
 from models.markov._train_markov_model import load_model, generate_text
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 
@@ -11,10 +15,18 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-def deepseek_model(text: str) -> str:
+# Initialize the embedding model
+EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+
+def vector_quotes(text : str) -> str:
     """
-    Use the deepseek LLM to produce a response related to
-    the `text`. See `config.yaml` for the system prompt.
+    Use the vector similarity between the user's speech (`text`) and
+    quotes from a database to find a similar quote.
+
+    Assumes a sqlite database with schema:
+    | author | quote | embedding |
+
+    NOTE: see `config.yaml` for the path to the embedding database
 
     Parameters
     ----------
@@ -25,9 +37,60 @@ def deepseek_model(text: str) -> str:
     -------
     str
         The response from the deepseek model.
+    """
+    # Embed the text
+    text_embedding = EMBEDDING_MODEL.encode(text)
+
+    # Connect to the database and get all the (quote, vector) tuples.
+    conn = sqlite3.connect(config["embedding_database_path"])
+    cursor = conn.cursor()
+
+    # Fetch all quotes and embeddings
+    cursor.execute("SELECT author, quote, embedding FROM quotes")
+    rows = cursor.fetchall()
+
+    # Process embeddings (stored as bytes in SQLite)
+    authors = []
+    quotes = []
+    embeddings = []
+
+    for author, quote, embedding_bytes in rows:
+        authors.append(author)
+        quotes.append(quote)
+
+        # Convert blob back to numpy array
+        embeddings.append(np.frombuffer(embedding_bytes, dtype=np.float32))
+            
+    # Convert to 2D array
+    quote_embeddings = np.stack(embeddings)
     
+    # Calculate similarities
+    similarities = cosine_similarity([text_embedding], quote_embeddings)
+    best_match_idx = np.argmax(similarities)
+    best_quote = quotes[best_match_idx]
+    
+    return best_quote
+
+
+def deepseek_model(text: str) -> str:
+    """
+    Use the deepseek LLM to produce a response related to
+    the `text`.
+    
+    NOTE: see `config.yaml` for the system prompt.
+
     NOTE: temperature is hard-coded to 1.5, for poetry.
     See: https://api-docs.deepseek.com/quick_start/parameter_settings
+
+    Parameters
+    ----------
+    text : str
+        Something said by a user.
+    
+    Returns
+    -------
+    str
+        The response from the deepseek model.
     """
     with open("deepseek_api_key.txt", "r") as f:
         deepseek_api_key = f.read().strip()
@@ -55,7 +118,9 @@ def deepseek_model(text: str) -> str:
 def tiny_llama_model(text: str) -> str:
     """
     Use the tiny-llama LLM to produce a response related to
-    the `text`. See `config.yaml` for the system prompt.
+    the `text`.
+    
+    NOTE: see `config.yaml` for the system prompt and API endpoint.
 
     Parameters
     ----------
@@ -67,7 +132,7 @@ def tiny_llama_model(text: str) -> str:
     str
         The response from the tiny-llama model.
     """
-    # system_prompt = config["system_prompt"] # not yet implemented
+    # NOTE: there might be a better way to format the system prompt.
     full_prompt = f"Human: {config['system_prompt']} {text} ### Assistant:"
 
     # Hit the API endpoint.
@@ -91,6 +156,7 @@ def random_markov_model(length : int,
                         model_path : str) -> str:
     """
     Uses a random markov model trained off some poetry.
+
     NOTE: model output is not conditioned off user input.
 
     Parameters
@@ -155,5 +221,8 @@ def get_response(text : str,
 
     if model == "deepseek":
         response = deepseek_model(text)
+
+    if model == "vector_quotes":
+        response = vector_quotes(text)
 
     return response

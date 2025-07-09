@@ -9,14 +9,17 @@ recording_max_duration: 60
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
 
-# Response model options: `echo`, `random_markov`, `tiny_llama`, `deepseek`.
-response_model: tiny_llama
+# Response model options: `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`.
+response_model: vector_quotes
 
 # System prompts are only applicable for LLM models (`tiny_llama`, `deepseek`).
 system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
 
 # API endpoint if using tiny_llama.
 tiny_llama_api_url: "http://100.116.247.74:5000/generate"
+
+# Embedding database path if using the `vector_quotes` model.
+embedding_database_path: quote_embeddings.db
 
 # TTS model options: `command_line`, `google_tts`.
 text_to_speech_model: google_tts

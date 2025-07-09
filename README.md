@@ -42,6 +42,8 @@ Create markov models:
 
 If using the deepseek model, you must have your API key inside a single-line file named `deepseek_api_key.txt`
 
+If using the vector_quotes model, first download the quotes spreadsheet as an Excel file names `quotes.xlsx` - it should have two columns: `author` and `quote`. Then run `create_embeddings_db.py` to generate `quote_embeddings.db`.
+
 
 ## Test
 

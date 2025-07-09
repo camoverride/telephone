@@ -12,3 +12,7 @@ _output_tmp.wav
 
 # API keys
 deepseek_api_key.txt
+
+# Database files
+*.db
+*.xlsx
