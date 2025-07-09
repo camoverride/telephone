@@ -19,7 +19,7 @@ system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
 tiny_llama_api_url: "http://100.116.247.74:5000/generate"
 
 # API endpoint for Jason's custom model
-jason_url: "http://172.17.0.1:5000/listen"
+jason_url: "http://10.247.175.17:5000/listen"
 
 # API endpoint for the printer server
 # NOTE each Pi should hit a unique printer
