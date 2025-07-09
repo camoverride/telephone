@@ -10,6 +10,7 @@ from models.markov._train_markov_model import load_model, generate_text
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
+
 def deepseek_model(text: str) -> str:
     """
     Use the deepseek LLM to produce a response related to
@@ -53,19 +54,29 @@ def deepseek_model(text: str) -> str:
 
 def tiny_llama_model(text: str) -> str:
     """
+    Use the tiny-llama LLM to produce a response related to
+    the `text`. See `config.yaml` for the system prompt.
+
+    Parameters
+    ----------
+    text : str
+        Something said by a user.
     
+    Returns
+    -------
+    str
+        The response from the tiny-llama model.
     """
     # system_prompt = config["system_prompt"] # not yet implemented
-    full_prompt = f"Human: {text} Assistant:"
+    full_prompt = f"Human: {config['system_prompt']} {text} ### Assistant:"
 
     # Hit the API endpoint.
-    response = requests.post(url=config["api_url"],
-                            json={"prompt": full_prompt},
-                            headers={"Content-Type": "application/json"})
+    response = requests.post(url=config["tiny_llama_api_url"],
+                             json={"prompt": full_prompt},
+                             headers={"Content-Type": "application/json"})
 
     # Check the server's response.
     if response.ok:
-        print("LLM Reply: ", response.json()["reply"])
 
         return response.json()["reply"]
 
