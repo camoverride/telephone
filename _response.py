@@ -72,6 +72,31 @@ def vector_quotes(text : str) -> str:
     return best_quote
 
 
+def jason_frontend(text : str) -> str:
+    """
+    Gets a response from Jason's custom model.
+
+    Parameters
+    ----------
+    text : str
+        Something said by a user.
+    
+    Returns
+    -------
+    str
+        The response from Jason's custom model.
+    """
+    headers = {"Content-Type": "application/json"}
+    data = {"message": text}
+
+    response = requests.post(config["jason_url"], headers=headers, json=data)
+    response.raise_for_status()
+    print(response.json())
+    result = response.json()
+
+    return result['user_response']['content']
+
+
 def deepseek_model(text: str) -> str:
     """
     Use the deepseek LLM to produce a response related to
@@ -224,5 +249,8 @@ def get_response(text : str,
 
     if model == "vector_quotes":
         response = vector_quotes(text)
+
+    if model == "jason":
+        response = jason_frontend(text)
 
     return response
