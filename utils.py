@@ -19,13 +19,6 @@ if platform.system() == "Linux":
     button = Button(17, bounce_time=0.05)
 
 
-# Voice activity detection. 0=aggressive, 3=very aggressive.
-vad = webrtcvad.Vad()
-vad.set_mode(2)
-P = pyaudio.PyAudio()
-
-
-
 def phone_picked_up() -> None:
     """
     Returns True if the phone is picked up, otherwise False.
@@ -132,6 +125,11 @@ def record_audio(save_filepath: str,
     str
         The filepath of the saved audio.
     """
+    # Voice activity detection. 0=aggressive, 3=very aggressive.
+    vad = webrtcvad.Vad()
+    vad.set_mode(2)
+    P = pyaudio.PyAudio()
+
     rate = 16000
 
     # Duration of a single frame in milliseconds
