@@ -185,6 +185,33 @@ def random_markov_model(length : int,
     return text
 
 
+def jason_frontend(text : str) -> str:
+    """
+    Send the user input to Jason's frontend and get a haiku response
+    """
+    headers = {"Content-Type": "application/json"}
+    data = {"message": text}
+
+    try:
+        response = requests.post(config["jason_url"], headers=headers, json=data)
+        response.raise_for_status()
+        print(response.json())
+        result = response.json()
+
+        if result and 'user_response' in result and 'content' in result['user_response']:
+            return result['user_response']['content']
+        else:
+            return result
+    
+    except requests.exceptions.ConnectionError:
+        print(f"Error: Could not connect to frontend")
+        print("Make sure the Flask app is running (python app.py)")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending message: {e}")
+        return None
+
+
 def get_response(text : str,
                  model : str) -> str:
     """
@@ -225,4 +252,12 @@ def get_response(text : str,
     if model == "vector_quotes":
         response = vector_quotes(text)
 
+    if model == "jason":
+        response = jason_frontend(text)
+
     return response
+
+
+if __name__ == '__main__':
+    test = get_response("test", "jason")
+    print(test)

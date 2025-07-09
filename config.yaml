@@ -10,13 +10,16 @@ recording_max_duration: 60
 speech_to_text_model: vosk
 
 # Response model options: `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`.
-response_model: vector_quotes
+response_model: jason
 
 # System prompts are only applicable for LLM models (`tiny_llama`, `deepseek`).
 system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
 
 # API endpoint if using tiny_llama.
 tiny_llama_api_url: "http://100.116.247.74:5000/generate"
+
+# API endpoint if using Jason's frontend
+jason_url: "http://172.17.0.1:5000/listen"
 
 # Embedding database path if using the `vector_quotes` model.
 embedding_database_path: quote_embeddings.db
