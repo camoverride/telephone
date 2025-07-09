@@ -10,7 +10,7 @@ recording_max_duration: 60
 speech_to_text_model: vosk
 
 # Response model options: `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`.
-response_model: vector_quotes
+response_model: deepseek
 
 # System prompts are only applicable for LLM models (`tiny_llama`, `deepseek`).
 system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
