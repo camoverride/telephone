@@ -104,3 +104,4 @@ Less important:
 - [ ] vosk model seems to work fine, but potentially set up Whisper too.
 - [ ] google works fine, but potentially set up additional TTS models
 - [ ] generic longevity tips
+- [ ] double check requirements

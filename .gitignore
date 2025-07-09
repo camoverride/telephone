@@ -3,8 +3,12 @@ __pycache__
 
 # Temp audio files
 _input_tmp.wav
+_output_tmp.wav
 
 # Temp model files
 **.zip
 **.15
 **.pkl
+
+# API keys
+deepseek_api_key.txt

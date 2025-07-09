@@ -250,3 +250,4 @@ websockets==15.0.1
 Werkzeug==2.2.2
 wrapt==1.14.1
 zipp==1.0.0
+openai==1.93.2

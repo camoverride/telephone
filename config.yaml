@@ -9,14 +9,14 @@ recording_max_duration: 60
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
 
-# Response model options: `echo`, `random_markov`, `tiny_llama`.
-response_model: tiny_llama
+# Response model options: `echo`, `random_markov`, `tiny_llama`, `deepseek`.
+response_model: deepseek
 
-# System prompt (only applicable for LLM models like `tiny-llama`.
-# NOTE: The character sequence `XXX` is where the user input gets added.
-#system_prompt: "Please generate a short 3-7-3 haiku based off the following text: XXX"
+# System prompts are only applicable for LLM models (`tiny_llama`, `deepseek`).
+system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
 
-api_url: "http://100.116.247.74:5000/generate"
+# API endpoint if using tiny_llama.
+tiny_llama_api_url: "http://100.116.247.74:5000/generate"
 
 # TTS model options: `command_line`, `google_tts`.
 text_to_speech_model: google_tts
