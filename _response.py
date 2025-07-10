@@ -89,7 +89,10 @@ def jason_frontend(text : str) -> str:
     headers = {"Content-Type": "application/json"}
     data = {"message": text}
 
-    response = requests.post(config["jason_url"], headers=headers, json=data)
+    response = requests.post(config["jason_url"],
+                             headers=headers,
+                             json=data,
+                             timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
     response.raise_for_status()
     result = response.json()
 
