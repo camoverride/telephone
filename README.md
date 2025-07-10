@@ -85,40 +85,9 @@ Follow these steps in order:
 
 - Install tailscale for remote access and debugging.
 - Configure backup wifi networks.
-- Set up periodic reboots (cron job)
+- Set up periodic reboots (cron job).
 
 
 ## Licence
 
 License: Non-Commercial MIT-style license. See `LICENSE` for details.
-
-
-## Notes & Todo's
-
-- ASR: Vosk seems adequte, as people are speaking very close to the mic.
-- Response: `vector_quotes` and `deepseek` work well.
-- TTS: I like the google voice model.
-
-
-Important:
-
-- [X] set up additional response models (conditioned markov, llama, tiny-llama [local])
-- [ ] add better instructions
-- [ ] reduce latency between prompt and beep
-- [X] make haiku continue printing even if hung up
-- [ ] if haiku is hung up, stop audio but continue printing
-- [ ] add gong sound while waiting
-- [ ] set up additional synthesis model (piper-tts)
-- [ ] stop speech synthesis if phone is hung up (see `utils.py: play_audio_interruptible`)
-- [ ] more elegant beginning prompt
-- [ ] deepseek chat mode (with memory)
-
-Less important:
-
-- [ ] reject ASR if it doesn't meet a confidence level.
-- [ ] convert `print` to `logging`
-- [ ] suppress annying vox logs (only relevant for local testing, these are not logged)
-- [ ] remove ephemeral files to allow Read-Only FS
-- [ ] vosk model seems to work fine, but potentially set up Whisper too.
-- [ ] generic longevity tips
-- [ ] double check requirements
