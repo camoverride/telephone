@@ -11,7 +11,7 @@ speech_to_text_model: vosk
 
 # Response model options: 
 # `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`, `jason`.
-response_model: deepseek
+response_model: jason
 fallback_response_model: deepseek
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
