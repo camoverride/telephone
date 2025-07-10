@@ -1,6 +1,8 @@
 # Telephone ☎️ 
 
-Code and setup guide for an interactive rotary telephone.
+The code for an interactive rotary telephone by [Cam Smith](https://smith.cam/).
+
+**Check it out!** Presented at Publicdisplay.art with an interactive front-end by [Jason]() in collaboration with [Seattle Future Arts](https://www.futurearts.co/).
 
 
 ## Materials & Assembly Guide
@@ -84,6 +86,11 @@ Follow these steps in order:
 - Install tailscale for remote access and debugging.
 - Configure backup wifi networks.
 - Set up periodic reboots (cron job)
+
+
+## Licence
+
+License: Non-Commercial MIT-style license. See `LICENSE` for details.
 
 
 ## Notes & Todo's
