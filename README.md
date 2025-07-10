@@ -27,6 +27,9 @@ If Raspberry Pi:
 - `source .venv/bin/activate`
 - `sudo apt-get update`
 - `sudo apt-get install -y portaudio19-dev`
+- `sudo apt install libcap-dev`
+- `sudo apt install libsmbclient-dev`
+- `sudo apt install python3-pyqt5 python3-pyqt5.sip`
 - `pip install -r requirements_pi.txt`
 
 
