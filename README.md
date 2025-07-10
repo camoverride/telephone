@@ -2,7 +2,7 @@
 
 The code for an interactive rotary telephone by [Cam Smith](https://smith.cam/).
 
-**Check it out!** Presented at Publicdisplay.art with an interactive front-end by [Jason]() in collaboration with [Seattle Future Arts](https://www.futurearts.co/).
+**Check it out!** Presented at Publicdisplay.art with an interactive front-end by [Jason Reinhardt](https://jason-reinhardt.com/) in collaboration with [Seattle Future Arts](https://www.futurearts.co/).
 
 
 ## Materials & Assembly Guide
