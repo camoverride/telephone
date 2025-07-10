@@ -79,9 +79,18 @@ def main():
 
             # Response generation.
             if phone_picked_up():
-                response_text = get_response(text=input_text,
-                                            model=config["response_model"])
-                
+
+                # Try using the model from the config. If it fails, use a backup model.
+                try:
+                    response_text = get_response(text=input_text,
+                                                 model=config["response_model"])
+                    
+                except Exception as e:
+                    print(e)
+                    print("Trying fallback response model: DEEPSEEK")
+                    response_text = get_response(text=input_text,
+                                                 model=config["fallback_response_model"])
+                    
                 print(f"Generated response text : {response_text}")
             
             else:
@@ -91,9 +100,8 @@ def main():
             # Text to speech.
             if phone_picked_up():
                 audio_output_filepath = text_to_speech(text=response_text,
-                                                    output_audio_path="_output_tmp.wav",
-                                                    model=config["text_to_speech_model"])
-                
+                                                       output_audio_path="_output_tmp.wav",
+                                                       model=config["text_to_speech_model"])
                 print(f"Saved output text : {audio_output_filepath}")
             else:
                 continue
