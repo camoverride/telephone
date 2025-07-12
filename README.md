@@ -73,7 +73,6 @@ Get the status:
 
 - `systemctl --user status telephone.service`
 
-
 Get the logs:
 
 - `journalctl --user -u telephone.service`

@@ -278,3 +278,57 @@ def print_text(text : str,
                              timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
 
     print(response.json())
+
+
+def start_audio_loop(looping_sound: str) -> subprocess.Popen:
+    """
+    Starts playing audio in a loop using ffplay (Linux) or
+    afplay (macOS). Returns the subprocess so it can be terminated.
+
+    NOTE: afplay does not loop on MACOS
+
+    Parameters
+    ----------
+    looping_sound : str
+        Path to an audio file that will loop following the initial message.
+    
+    Returns
+    -------
+    subprocess.Popen
+        A subprocess that can be terminated.
+    """
+    # Play the sound ONE TIME.
+    if platform.system() == "Darwin":
+        process = subprocess.Popen(["afplay", looping_sound])
+
+    # Play the looping sound.
+    elif platform.system() == "Linux":
+        process = subprocess.Popen(
+            ["ffplay", "-nodisp", "-autoexit", "-loglevel",
+             "quiet", "-loop", "0", looping_sound],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+    else:
+        raise RuntimeError("Unsupported OS for audio playback")
+
+    return process
+
+
+def stop_audio_loop(process: subprocess.Popen) -> None:
+    """
+    Stops the audio loop by terminating the process.
+
+    Parameters
+    ----------
+    process : subprocess.Popen
+        A process that can be terminated.
+    
+    Returns
+    -------
+    None
+        A process is terminated.
+    """
+    if process and process.poll() is None:
+        process.terminate()
