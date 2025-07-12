@@ -108,7 +108,8 @@ def play_prompt(prompt_start_delay : int,
 
 
 def record_audio(save_filepath: str,
-                 max_duration: int) -> str:
+                 max_duration: int,
+                 silence_timeout : int) -> str:
     """
     Records audio and saves it to a .wav file, stopping when
     speech ends or max_duration is reached.
@@ -119,6 +120,8 @@ def record_audio(save_filepath: str,
         Where the resulting .wav file will be saved.
     max_duration : int
         Maximum duration of the recording, in seconds.
+    silence_timeout : int
+        Ends recording if no speech for `silence_timeout` secs.
 
     Returns
     -------
@@ -141,9 +144,6 @@ def record_audio(save_filepath: str,
     # 2 bytes per sample (16-bit audio)
     frame_bytes = frame_size * 2
 
-    # Stop if silence for 1 second
-    silence_timeout = 1
-
     # Open audio stream, defined globally
     stream = P.open(format=pyaudio.paInt16,
                     channels=1,
@@ -151,8 +151,10 @@ def record_audio(save_filepath: str,
                     input=True,
                     frames_per_buffer=frame_size)
 
+    # Buffers
     frames = []
     ring_buffer = collections.deque(maxlen=int(silence_timeout * 1000 / frame_duration_ms))
+    pre_speech_buffer = collections.deque(maxlen=10) # store ~300ms of audio before speech starts
 
     start_time = time.time()
     speech_detected = False
@@ -166,15 +168,22 @@ def record_audio(save_filepath: str,
             data = stream.read(frame_size, exception_on_overflow=False)
             is_speech = vad.is_speech(data, rate)
 
-            frames.append(data)
-            ring_buffer.append(is_speech)
+            if not speech_detected:
+                pre_speech_buffer.append(data)
+                if is_speech:
+                    speech_detected = True
 
-            if is_speech:
-                speech_detected = True
+                    # Prepend buffered audio
+                    frames.extend(pre_speech_buffer)
 
-            if speech_detected and not any(ring_buffer):
-                # We heard speech earlier, but now it's been silent for a while
-                break
+            else:
+                frames.append(data)
+                ring_buffer.append(is_speech)
+
+                # Speech stopped for a while
+                if not any(ring_buffer):
+                    break
+
     finally:
         stream.stop_stream()
         stream.close()

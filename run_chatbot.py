@@ -32,7 +32,8 @@ def main():
             if phone_picked_up():
                 audio_input_filepath = record_audio(save_filepath="_input_tmp.wav",
                                                     max_duration=\
-                                                        config["recording_max_duration"])
+                                                        config["recording_max_duration"],
+                                                    silence_timeout=config["silence_timeout"])
 
                 print(f"Saved audio to : \
                     {audio_input_filepath}")
