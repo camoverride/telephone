@@ -157,12 +157,14 @@ def record_audio(save_filepath: str,
     pre_speech_buffer = collections.deque(maxlen=10) # store ~300ms of audio before speech starts
 
     start_time = time.time()
+    last_voice_time = None
     speech_detected = False
 
     try:
         while True:
             now = time.time()
             if now - start_time > max_duration:
+                print("Max duration for recording reached!")
                 break
 
             data = stream.read(frame_size, exception_on_overflow=False)
@@ -170,18 +172,31 @@ def record_audio(save_filepath: str,
 
             if not speech_detected:
                 pre_speech_buffer.append(data)
+
                 if is_speech:
                     speech_detected = True
+                    last_voice_time = now
 
                     # Prepend buffered audio
                     frames.extend(pre_speech_buffer)
+
+                    print("Speech detected, recording...")
+                
+                elif last_voice_time is None:
+                    # User never spoke; start timeout after prompt
+                    if now - start_time > silence_timeout:
+                        print("No speech detected; silence timeout reached.")
+                        break
 
             else:
                 frames.append(data)
                 ring_buffer.append(is_speech)
 
-                # Speech stopped for a while
-                if not any(ring_buffer):
+                if is_speech:
+                    last_voice_time = now
+
+                elif now - last_voice_time > silence_timeout:
+                    print("Silence after speech detected; stopping.")
                     break
 
     finally:
