@@ -273,6 +273,8 @@ def print_text(text : str,
     print(f"Printing this: {text}")
     data = {"text": text}
 
-    response = requests.post(printer_api, json=data)
+    response = requests.post(printer_api,
+                             json=data,
+                             timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
 
     print(response.json())
