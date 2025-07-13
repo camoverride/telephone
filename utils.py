@@ -227,12 +227,12 @@ def record_audio(save_filepath: str,
                     last_speech_time = now
 
                 # Check if max_duration exceeded (count from speech start)
-                if now - speech_start_time > max_duration:
+                if speech_start_time is not None and now - speech_start_time > max_duration:
                     print("Max duration reached, stopping recording.")
                     break
 
                 # Check if silence timeout exceeded after last speech detected
-                if now - last_speech_time > silence_timeout:
+                if last_speech_time is not None and now - last_speech_time > silence_timeout:
                     print("Silence timeout reached after speech, stopping recording.")
                     break
 
