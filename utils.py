@@ -157,7 +157,7 @@ def record_audio(save_filepath: str,
     # (mode 0=aggressive, 2=moderate aggressive, 3=very aggressive).
     # NOTE: possibly yank `mode`` to argument variable.
     vad = webrtcvad.Vad()
-    vad.set_mode(2)
+    vad.set_mode(3)
     P = pyaudio.PyAudio()
 
     rate = 16000
