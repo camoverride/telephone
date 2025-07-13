@@ -10,7 +10,7 @@ speech_onset_timeout: 10
 recording_max_duration: 60
 
 # How many seconds must the person be quirt for until the recording ends.
-silence_timeout: 1
+silence_timeout: 3
 
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
