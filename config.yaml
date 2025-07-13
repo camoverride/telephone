@@ -3,6 +3,9 @@ prompt_start_delay: 1
 starting_audio_prompt_dir: prompts/beauty
 prompt_closing_sound: prompts/beep.wav
 
+# How long the phone should "listen" before concluding that nobody is talking.
+speech_onset_timeout: 10
+
 # Max length for a recording.
 recording_max_duration: 60
 

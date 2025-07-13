@@ -108,41 +108,62 @@ def play_prompt(prompt_start_delay : int,
 
 
 def record_audio(save_filepath: str,
+                 speech_onset_timeout : int,
                  max_duration: int,
-                 silence_timeout : int) -> str:
+                 silence_timeout : int) -> str | None:
     """
-    Records audio and saves it to a .wav file, stopping when
-    speech ends or max_duration is reached.
+    Records audio and saves it to a .wav file.
+
+    Listening begins immediately, with voice activity detection (VAD)
+    waiting up to `speech_onset_timeout` seconds to detect human speech.
+    Speech is recorded from the beginning of speech onset for up to
+    `max_duration` seconds or until the speaker is silent for
+    `silence_timeout` seconds.
+
+    The file is saved to `save_filepath`.
+
+    NOTE: there is a buffer so that some audio from before VAD detects
+    speech onset is also recorded, meaning that no speech is lost
+    (VAD can lag slightly behind actual speech onset).
+
+    NOTE: If no speech is recorded within the initial `speech_onset_timeout`
+    window, the function returns None.
 
     Parameters
     ----------
     save_filepath : str
         Where the resulting .wav file will be saved.
+    speech_onset_timeout : int
+        This function listens for `speech_onset_timeout` from the beginning
+        of this function call for human speech. NOTE: If no speech is detected
+        within this window the function returns `None`
     max_duration : int
-        Maximum duration of the recording, in seconds.
+        Maximum duration of the speech recording, in seconds, starting
+        from the beginning of speech onset.
     silence_timeout : int
-        Ends recording if no speech for `silence_timeout` secs.
+        Ends recording if speech has been initiated but there is no
+        additional speech for `silence_timeout` secs.
 
     Returns
     -------
-    str
-        The filepath of the saved audio.
+    None
+        if no speech is detected within the `speech_onset_timeout`
+        window, or if VAD is triggered but there is some downstream
+        error (for example: speech is incomprehensible).
+    str 
+        if there was audio, filepath of the saved audio.
     """
-    # Voice activity detection. 0=aggressive, 3=very aggressive.
+    # Voice activity detection
+    # (mode 0=aggressive, 2=moderate aggressive, 3=very aggressive).
+    # NOTE: possibly yank `mode`` to argument variable.
     vad = webrtcvad.Vad()
     vad.set_mode(2)
     P = pyaudio.PyAudio()
 
     rate = 16000
-
-    # Duration of a single frame in milliseconds
     frame_duration_ms = 30
-
-    # Number of samples per frame
     frame_size = int(rate * frame_duration_ms / 1000)
-
-    # 2 bytes per sample (16-bit audio)
-    frame_bytes = frame_size * 2
+    frame_bytes = frame_size * 2 # 16-bit audio => 2 bytes per sample
 
     # Open audio stream, defined globally
     stream = P.open(format=pyaudio.paInt16,
@@ -151,52 +172,67 @@ def record_audio(save_filepath: str,
                     input=True,
                     frames_per_buffer=frame_size)
 
-    # Buffers
+    # Recorded frames after speech onset.
     frames = []
-    ring_buffer = collections.deque(maxlen=int(silence_timeout * 1000 / frame_duration_ms))
-    pre_speech_buffer = collections.deque(maxlen=10) # store ~300ms of audio before speech starts
 
-    start_time = time.time()
-    last_voice_time = None
-    speech_detected = False
+    # Buffer of ~300ms before speech onset.
+    pre_speech_buffer = collections.deque(maxlen=10)
+
+    # Track silence after speech onset.
+    ring_buffer = collections.deque(maxlen=int(silence_timeout * 1000 / frame_duration_ms))
+
+    # Timers and flags
+    function_start_time = time.time()
+    speech_start_time = None # When speech was first detected
+    last_speech_time = None # Last time speech was detected
 
     try:
         while True:
             now = time.time()
-            if now - start_time > max_duration:
-                print("Max duration for recording reached!")
-                break
 
+            # Read one frame of audio
             data = stream.read(frame_size, exception_on_overflow=False)
+
+            # Check if frame contains speech
             is_speech = vad.is_speech(data, rate)
 
-            if not speech_detected:
+            if speech_start_time is None:
+                # Waiting for speech onset
+
                 pre_speech_buffer.append(data)
 
                 if is_speech:
-                    speech_detected = True
-                    last_voice_time = now
+                    # Speech detected - mark speech start time and last speech time
+                    speech_start_time = now
+                    last_speech_time = now
 
-                    # Prepend buffered audio
+                    # Add buffered pre-speech audio frames to recording frames
                     frames.extend(pre_speech_buffer)
 
-                    print("Speech detected, recording...")
-                
-                elif last_voice_time is None:
-                    # User never spoke; start timeout after prompt
-                    if now - start_time > silence_timeout:
-                        print("No speech detected; silence timeout reached.")
-                        break
+                    print("Speech detected, starting recording...")
+
+                elif now - function_start_time > speech_onset_timeout:
+                    # No speech detected within onset timeout - abort recording
+                    print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
+                    return None
 
             else:
+                # Speech has started - recording ongoing
+
                 frames.append(data)
                 ring_buffer.append(is_speech)
 
                 if is_speech:
-                    last_voice_time = now
+                    last_speech_time = now
 
-                elif now - last_voice_time > silence_timeout:
-                    print("Silence after speech detected; stopping.")
+                # Check if max_duration exceeded (count from speech start)
+                if now - speech_start_time > max_duration:
+                    print("Max duration reached, stopping recording.")
+                    break
+
+                # Check if silence timeout exceeded after last speech detected
+                if now - last_speech_time > silence_timeout:
+                    print("Silence timeout reached after speech, stopping recording.")
                     break
 
     finally:
@@ -204,13 +240,19 @@ def record_audio(save_filepath: str,
         stream.close()
         P.terminate()
 
+    # If no frames recorded (shouldn't happen, but safeguard)
+    if not frames:
+        print("No audio recorded despite speech detection, returning None.")
+        return None
+
+    # Save recorded frames to WAV file
     with wave.open(save_filepath, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(P.get_sample_size(pyaudio.paInt16))
         wf.setframerate(rate)
         wf.writeframes(b''.join(frames))
 
-    return save_filepath
+    print(f"Audio saved to {save_filepath}")
 
 
 def play_audio(filename : str) -> None:
