@@ -188,6 +188,7 @@ def record_audio(save_filepath: str,
 
     try:
         while True:
+            time.sleep(0.01)
             now = time.time()
 
             # Read one frame of audio
@@ -253,6 +254,8 @@ def record_audio(save_filepath: str,
         wf.writeframes(b''.join(frames))
 
     print(f"Audio saved to {save_filepath}")
+
+    return save_filepath
 
 
 def play_audio(filename : str) -> None:
