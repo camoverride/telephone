@@ -212,10 +212,10 @@ def record_audio(save_filepath: str,
 
                     print("Speech detected, starting recording...")
 
-                elif now - function_start_time > speech_onset_timeout:
-                    # No speech detected within onset timeout - abort recording
-                    print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
-                    return None
+            # This check must be outside the inner `if` block
+            if speech_start_time is None and now - function_start_time > speech_onset_timeout:
+                print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
+                return None
 
             else:
                 # Speech has started - recording ongoing
