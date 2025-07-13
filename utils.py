@@ -181,6 +181,10 @@ def record_audio(save_filepath: str,
     # Track silence after speech onset.
     ring_buffer = collections.deque(maxlen=int(silence_timeout * 1000 / frame_duration_ms))
 
+    # New buffer for onset analysis
+    onset_window = collections.deque(maxlen=int(1000 / frame_duration_ms)) # ~1s window
+    speech_start_candidate_time = None
+
     # Timers and flags
     function_start_time = time.time()
     speech_start_time = None # When speech was first detected
@@ -201,6 +205,18 @@ def record_audio(save_filepath: str,
                 # Waiting for speech onset
 
                 pre_speech_buffer.append(data)
+                onset_window.append(is_speech)
+
+                # Track VAD signals inside an onset window.
+                if sum(onset_window) > 15:  # At least 15/33 frames (~450ms of speech in 1s)
+                    speech_start_time = now
+                    last_speech_time = now
+                    frames.extend(pre_speech_buffer)
+                    print("Speech detected, starting recording...")
+
+                elif now - function_start_time > speech_onset_timeout:
+                    print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
+                    return None
 
                 if is_speech:
                     # Speech detected - mark speech start time and last speech time
