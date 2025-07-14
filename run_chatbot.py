@@ -114,13 +114,13 @@ def main():
                     audio_loop_process = start_audio_loop(looping_sound="prompts/chime_waiting_faster.wav")
 
                     # Try using the model from the config. If it fails, use a backup model.
-                    response_text = killable_get_response(text=input_text,
+                    response_text = get_response(text=input_text,
                                                  model=config["response_model"])
                     
                 except Exception as e:
                     print(e)
                     logging.info("Trying fallback response model: DEEPSEEK")
-                    response_text = killable_get_response(text=input_text,
+                    response_text = get_response(text=input_text,
                                                           model=config["fallback_response_model"])
                     
                 finally:
