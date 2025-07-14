@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 import pyttsx3
+import re
 import subprocess
 
 
@@ -11,6 +12,25 @@ import subprocess
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+def clean_text_for_tts(text : str) -> str:
+    """
+    Remove characters unwanted for TTS.
+
+    Parameters
+    ----------
+    text : str
+        Some text returned from the response genertor.
+    
+    Returns
+    -------
+    str
+        Text cleaned of unwanted characters.
+    """
+    cleaned = re.sub(r'[\*\_\[\]\{\}\(\)\~\^\=\|\\\/<>#@`]', '', text)
+
+    return cleaned
 
 
 def google_asr(text : str,
@@ -107,6 +127,10 @@ def text_to_speech(text : str,
     str
         The `output_audio_path`
     """
+    # Purge unwanted characters from the text
+    text = clean_text_for_tts(text)
+
+    # Choose the right model.
     if model == "command_line":
         output_audio_path = command_line_say(text=text,
                                              output_audio_path=output_audio_path)
