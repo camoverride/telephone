@@ -3,14 +3,11 @@ prompt_start_delay: 1
 starting_audio_prompt_dir: prompts/beauty
 prompt_closing_sound: prompts/beep.wav
 
-# How long the phone should "listen" before concluding that nobody is talking.
-speech_onset_timeout: 10
-
-# Max length for a recording.
-recording_max_duration: 60
-
-# How many seconds must the person be quiet for until the recording ends.
+# Recording parameters.
+min_recording_duration: 5
+max_recording_duration: 25
 silence_timeout: 3
+speech_onset_timeout: 10 # deprecated.
 
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
