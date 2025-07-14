@@ -2,7 +2,7 @@ import time
 import yaml
 import logging
 from _speech_to_text import speech_to_text, killable_speech_to_text
-from _response import get_response
+from _response import get_response, killable_get_response
 from _text_to_speech import text_to_speech
 from utils import play_prompt, phone_picked_up, ignored_phrases, \
     record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop, \
@@ -114,14 +114,14 @@ def main():
                     audio_loop_process = start_audio_loop(looping_sound="prompts/chime_waiting_faster.wav")
 
                     # Try using the model from the config. If it fails, use a backup model.
-                    response_text = get_response(text=input_text,
+                    response_text = killable_get_response(text=input_text,
                                                  model=config["response_model"])
                     
                 except Exception as e:
                     print(e)
                     logging.info("Trying fallback response model: DEEPSEEK")
-                    response_text = get_response(text=input_text,
-                                                 model=config["fallback_response_model"])
+                    response_text = killable_get_response(text=input_text,
+                                                          model=config["fallback_response_model"])
                     
                 finally:
                     # Always stop the looping audio

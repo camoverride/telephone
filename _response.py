@@ -3,6 +3,9 @@ from openai import OpenAI
 import requests
 import sqlite3
 import yaml
+import time
+import multiprocessing
+from utils import phone_picked_up
 from models.markov._train_markov_model import load_model, generate_text
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -256,3 +259,70 @@ def get_response(text : str,
         response = jason_frontend(text)
 
     return response
+
+
+def _get_response_worker(text: str, model: str, result_queue: multiprocessing.Queue):
+    try:
+        if model == "echo":
+            response = text
+
+        elif model == "random_markov":
+            response = random_markov_model(length=30,
+                                           start_word="the",
+                                           model_path="models/markov/_random_poems_model.pkl")
+
+        elif model == "tiny_llama":
+            response = tiny_llama_model(text=text)
+
+        elif model == "deepseek":
+            response = deepseek_model(text)
+
+        elif model == "vector_quotes":
+            response = vector_quotes(text)
+
+        elif model == "jason":
+            response = jason_frontend(text)
+
+        else:
+            response = f"[Unknown model: {model}]"
+
+        result_queue.put(response)
+
+    except Exception as e:
+        result_queue.put(None)
+
+
+def killable_get_response(text: str, model: str) -> str | None:
+    result_queue = multiprocessing.Queue()
+    proc = multiprocessing.Process(target=_get_response_worker,
+                                   args=(text, model, result_queue))
+    proc.start()
+
+    try:
+        while proc.is_alive():
+            if not phone_picked_up():
+                print("Phone placed down. Terminating text generation...")
+                proc.terminate()
+                proc.join()
+                return None
+            time.sleep(0.1)
+
+        if not result_queue.empty():
+            return result_queue.get()
+
+        return None
+
+    except KeyboardInterrupt:
+        proc.terminate()
+        proc.join()
+        return None
+
+
+"""
+for model in models:
+    try:
+        generate_response(model)
+    except:
+        pass
+
+"""
