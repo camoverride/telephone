@@ -6,7 +6,7 @@ from _text_to_speech import text_to_speech
 from utils import play_prompt, phone_picked_up, ignored_phrases, \
     record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop, \
     play_audio_interruptible
-from _silero_vad import record_audio_with_silero_vad
+from _silero_vad import record_audio_with_silero_vad, killable_record_audio_silero
 
 
 
@@ -37,7 +37,7 @@ def main():
                 #                                     max_duration=config["recording_max_duration"],
                 #                                     silence_timeout=config["silence_timeout"])
 
-                audio_input_filepath = record_audio_with_silero_vad(
+                audio_input_filepath = killable_record_audio_silero(
                                             save_filepath="_input_tmp.wav",
                                             silence_duration_to_stop=config["silence_timeout"],
                                             min_recording_duration=config["min_recording_duration"],

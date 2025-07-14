@@ -3,8 +3,45 @@ import wave
 import time
 import numpy as np
 import torch
+import multiprocessing
 from silero_vad import load_silero_vad, get_speech_timestamps
+from utils import phone_picked_up
 
+
+
+def killable_record_audio_silero(save_path: str,
+                                 silence_duration_to_stop: float,
+                                 min_recording_duration: float,
+                                 max_recording_duration: float):
+    # This wrapper starts the process and monitors it
+    recording_proc = multiprocessing.Process(
+        target=record_audio_with_silero_vad,
+        kwargs=dict(
+            save_filepath=save_path,
+            silence_duration_to_stop=silence_duration_to_stop,
+            min_recording_duration=min_recording_duration,
+            max_recording_duration=max_recording_duration
+        )
+    )
+
+    recording_proc.start()
+    print("Recording started in subprocess...")
+
+    try:
+        while recording_proc.is_alive():
+            if not phone_picked_up():
+                print("Phone was placed down. Terminating recording...")
+                recording_proc.terminate()
+                recording_proc.join()
+                return None
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("Interrupted by user.")
+        recording_proc.terminate()
+        recording_proc.join()
+        return None
+
+    return save_path if recording_proc.exitcode == 0 else None
 
 
 def record_audio_with_silero_vad(save_filepath: str,
