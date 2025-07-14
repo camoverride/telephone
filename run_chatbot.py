@@ -4,7 +4,8 @@ from _speech_to_text import speech_to_text
 from _response import get_response
 from _text_to_speech import text_to_speech
 from utils import play_prompt, phone_picked_up, ignored_phrases, \
-    record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop
+    record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop, \
+    play_audio_interruptible
 from _silero_vad import record_audio_with_silero_vad
 
 
@@ -128,12 +129,16 @@ def main():
             if phone_picked_up():
                 play_audio(filename=audio_output_filepath)
 
-            # else:
-            #     continue
 
             # Print the resulting text
             print_text(text=response_text, printer_api=config["printer_server_url"])
             print("Printing the text")
+
+
+            # Play the disconnected sound as long as the phone is off the hook.
+            play_audio_interruptible(filepath="prompts/soft_blur.wav",
+                                     looping=True)
+                        
 
 
         except Exception as e:

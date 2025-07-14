@@ -35,7 +35,8 @@ def phone_picked_up() -> None:
         return button.is_pressed
 
 
-def play_audio_interruptible(filepath : str) -> None:
+def play_audio_interruptible(filepath : str,
+                             looping=False) -> None:
     """
     Plays an audio file asynchronously using subprocess.Popen.
     Waits for the file to complete playing before moving on.
@@ -48,11 +49,17 @@ def play_audio_interruptible(filepath : str) -> None:
 
     # Use aplay for Raspberry Pi audio playback (Linux)
     elif platform.system() == "Linux":
-        process = subprocess.Popen(
-            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filepath],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        if looping:
+            process = subprocess.Popen(
+                ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", "-loop", "0", filepath],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+
+        else:
+            process = subprocess.Popen(
+                ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filepath],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
 
     else:
         raise RuntimeError("Unsupported OS for audio playback")
@@ -272,6 +279,9 @@ def record_audio(save_filepath: str,
     print(f"Audio saved to {save_filepath}")
 
     return save_filepath
+
+
+
 
 
 def play_audio(filename : str) -> None:
