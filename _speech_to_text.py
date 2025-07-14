@@ -1,7 +1,10 @@
 import wave
 import os
 import json
+import time
+import multiprocessing
 from vosk import Model, KaldiRecognizer
+from utils import phone_picked_up
 
 
 
@@ -72,3 +75,47 @@ def speech_to_text(audio_file_path : str,
                                model_path="models/vosk-model-small-en-us-0.15")
 
     return result_text
+
+
+def _speech_to_text_worker(audio_file_path: str,
+                           model: str,
+                           result_queue: multiprocessing.Queue):
+    try:
+        if model == "vosk":
+            result_text = vosk_asr(
+                audio_file_path=audio_file_path,
+                model_path="models/vosk-model-small-en-us-0.15")
+
+        result_queue.put(result_text)
+
+    except Exception as e:
+        result_queue.put(None)
+
+
+def killable_speech_to_text(audio_file_path: str,
+                            model: str) -> str | None:
+    result_queue = multiprocessing.Queue()
+    proc = multiprocessing.Process(
+        target=_speech_to_text_worker,
+        args=(audio_file_path, model, result_queue)
+    )
+    proc.start()
+
+    try:
+        while proc.is_alive():
+            if not phone_picked_up():
+                print("Phone placed down. Terminating speech-to-text process...")
+                proc.terminate()
+                proc.join()
+                return None
+            time.sleep(0.1)
+
+        # If process exited, get result (if available)
+        if not result_queue.empty():
+            return result_queue.get()
+        return None
+
+    except KeyboardInterrupt:
+        proc.terminate()
+        proc.join()
+        return None
