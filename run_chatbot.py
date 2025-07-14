@@ -130,9 +130,14 @@ def main():
                 play_audio(filename=audio_output_filepath)
 
 
-            # Print the resulting text
-            print_text(text=response_text, printer_api=config["printer_server_url"])
-            print("Printing the text")
+            try:
+                # Print the resulting text
+                print_text(text=response_text, printer_api=config["printer_server_url"])
+                print("Printing the text")
+
+            # Continue to the next step even if this fails.
+            except Exception as e:
+                print(e)
 
 
             # Play the disconnected sound until the phone is returned to the hook.
