@@ -1,5 +1,6 @@
 import time
 import yaml
+import logging
 from _speech_to_text import speech_to_text, killable_speech_to_text
 from _response import get_response
 from _text_to_speech import text_to_speech
@@ -7,6 +8,13 @@ from utils import play_prompt, phone_picked_up, ignored_phrases, \
     record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop, \
     play_audio_interruptible
 from _silero_vad import record_audio_with_silero_vad, killable_record_audio_silero
+
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 
@@ -19,9 +27,14 @@ def main():
 
     while True:
         try:
+
             # Play prompt
             if phone_picked_up():
+                # Requires latency or this loop will run too often, consuming system resources.
                 time.sleep(0.5)
+
+                logging.info("--- Playing starting prompt")
+
                 play_prompt(prompt_start_delay=config["prompt_start_delay"],
                             starting_audio_prompt_dir=config["starting_audio_prompt_dir"],
                             prompt_closing_sound=config["prompt_closing_sound"])
@@ -37,6 +50,7 @@ def main():
                 #                                     max_duration=config["recording_max_duration"],
                 #                                     silence_timeout=config["silence_timeout"])
 
+                logging.info("--- Recording audio")
                 audio_input_filepath = killable_record_audio_silero(
                                             save_filepath="_input_tmp.wav",
                                             silence_duration_to_stop=config["silence_timeout"],
@@ -52,6 +66,8 @@ def main():
 
             # Speech to text.
             if phone_picked_up():
+                logging.info("--- Performing ASR")
+
                 input_text = killable_speech_to_text(audio_file_path=audio_input_filepath,
                                                      model=config["speech_to_text_model"])
                 
@@ -59,20 +75,20 @@ def main():
                 if ignored_phrases(input_text):
 
                     if ignored_phrases == "hello":
-                        print(f"Recognized text :  {input_text}")
-                        print("IGNORING - hello message.")
+                        logging.info(f"Recognized text :  {input_text}")
+                        logging.info("IGNORING - hello message.")
 
                         continue
 
                     if ignored_phrases == "nothing":
-                        print(f"Recognized text :  {input_text}")
-                        print("IGNORING - nothing recognized.")
+                        logging.info(f"Recognized text :  {input_text}")
+                        logging.info("IGNORING - nothing recognized.")
 
                         continue
 
                     if ignored_phrases == "profanity":
-                        print(f"Recognized text :  {input_text}")
-                        print("IGNORING - contains profanity.")
+                        logging.info(f"Recognized text :  {input_text}")
+                        logging.info("IGNORING - contains profanity.")
 
                         continue
 
@@ -80,7 +96,7 @@ def main():
                     continue
                 
                 else:
-                    print(f"Recognized text :  {input_text}")
+                    logging.info(f"Recognized text :  {input_text}")
             
             else:
                 continue
@@ -88,6 +104,8 @@ def main():
 
             # Response generation.
             if phone_picked_up():
+
+                logging.info("--- Generating response")
                 # Track the audio process so it can be killed later.
                 audio_loop_process = None
 
@@ -101,7 +119,7 @@ def main():
                     
                 except Exception as e:
                     print(e)
-                    print("Trying fallback response model: DEEPSEEK")
+                    logging.info("Trying fallback response model: DEEPSEEK")
                     response_text = get_response(text=input_text,
                                                  model=config["fallback_response_model"])
                     
@@ -109,7 +127,7 @@ def main():
                     # Always stop the looping audio
                     stop_audio_loop(audio_loop_process)
                     
-                print(f"Generated response text : {response_text}")
+                logging.info(f"Generated response text : {response_text}")
             
             else:
                 continue
@@ -117,16 +135,20 @@ def main():
 
             # Text to speech.
             if phone_picked_up():
+                logging.info("--- Text to speech")
+
                 audio_output_filepath = text_to_speech(text=response_text,
                                                        output_audio_path="_output_tmp.wav",
                                                        model=config["text_to_speech_model"])
-                print(f"Saved output text : {audio_output_filepath}")
+                logging.info(f"Saved output text : {audio_output_filepath}")
             else:
                 continue
 
 
             # Play audio!
-            if phone_picked_up():
+            if phone_picked_up(): # TODO: make this killable
+                logging.info("--- Playing output")
+
                 play_audio(filename=audio_output_filepath)
 
 
