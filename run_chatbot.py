@@ -155,6 +155,7 @@ def main():
                 # If there is an exception in ASR, Response, or TTS
                 except Exception as e:
                     print(e)
+                    continue
 
                 # Clean up the audio process
                 finally:
