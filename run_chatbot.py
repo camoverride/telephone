@@ -141,7 +141,7 @@ def main():
 
 
             # Play the disconnected sound until the phone is returned to the hook.
-            play_audio_interruptible(filepath="prompts/soft_blur.wav",
+            play_audio_interruptible(filepath="prompts/hang_up_tone.mp3",
                                      looping=True)
                         
 
