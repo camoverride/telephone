@@ -19,7 +19,7 @@ if platform.system() == "Linux":
     button = Button(17, bounce_time=0.05)
 
 
-def phone_picked_up() -> None:
+def phone_picked_up() -> bool:
     """
     Returns True if the phone is picked up, otherwise False.
 
