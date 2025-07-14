@@ -102,7 +102,7 @@ def play_prompt(prompt_start_delay : int,
 
     # Randomly select a prompt from the dir
     prompt_files = [f for f in os.listdir(starting_audio_prompt_dir) \
-                    if f.lower().endswith(".wav")]
+                    if f.lower().endswith((".wav", ".mp3"))]
     prompt_path = os.path.join(starting_audio_prompt_dir, 
                                random.choice(prompt_files))
 
