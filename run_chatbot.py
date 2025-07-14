@@ -43,9 +43,10 @@ def main():
                 continue
 
 
+
             # Audio recording.
             if phone_picked_up():
-                recording_asr_noise_process = None
+                recording_background_noise_process = None
 
                 try:
                     # audio_input_filepath = record_audio(save_filepath="_input_tmp.wav",
@@ -54,7 +55,7 @@ def main():
                     #                                     silence_timeout=config["silence_timeout"])
 
                     logging.info("--- Recording audio")
-                    recording_asr_noise_process = start_audio_loop(looping_sound="prompts/soft_background.wav")
+                    recording_background_noise_process = start_audio_loop(looping_sound="prompts/soft_background.wav")
 
                     audio_input_filepath = killable_record_audio_silero(
                                                 save_filepath="_input_tmp.wav",
@@ -65,7 +66,23 @@ def main():
                     print(f"Saved audio to : \
                         {audio_input_filepath}")
                     
+                except Exception as e:
+                    print(e)
 
+                finally:
+                    stop_audio_loop(recording_background_noise_process)
+
+            else:
+                continue
+
+
+            # ASR, Response, and TTS wrapper
+            if phone_picked_up():
+
+                asr_tts_background_noise_process = None
+
+                try:
+                    asr_tts_background_noise_process = start_audio_loop(looping_sound="prompts/chime_waiting_faster.wav")
 
                     # Speech to text.
                     if phone_picked_up():
@@ -95,66 +112,57 @@ def main():
 
                                 continue
 
-
                             continue
                         
                         else:
                             logging.info(f"Recognized text :  {input_text}")
                     
+
+
+                    # Response generation.
+                    if phone_picked_up():
+
+                        logging.info("--- Generating response")
+                        try:
+                            # Try using the model from the config. If it fails, use a backup model.
+                            response_text = get_response(text=input_text,
+                                                        model=config["response_model"])
+                            
+                        except Exception as e:
+                            print(e)
+                            logging.info("Trying fallback response model: DEEPSEEK")
+                            response_text = get_response(text=input_text,
+                                                                model=config["fallback_response_model"])
+                            
+                        logging.info(f"Generated response text : {response_text}")
+                    
                     else:
                         continue
 
+
+
+                    # Text to speech.
+                    if phone_picked_up():
+                        logging.info("--- Text to speech")
+
+                        audio_output_filepath = text_to_speech(text=response_text,
+                                                            output_audio_path="_output_tmp.wav",
+                                                            model=config["text_to_speech_model"])
+                        logging.info(f"Saved output text : {audio_output_filepath}")
+                    else:
+                        continue
+
+                # If there is an exception in ASR, Response, or TTS
                 except Exception as e:
                     print(e)
 
+                # Clean up the audio process
                 finally:
-                    stop_audio_loop(recording_asr_noise_process)
+                    stop_audio_loop(asr_tts_background_noise_process)
 
             else:
                 continue
 
-
-            # Response generation.
-            if phone_picked_up():
-
-                logging.info("--- Generating response")
-                # Track the audio process so it can be killed later.
-                audio_loop_process = None
-
-                try:
-                    # Start looped audio playback
-                    audio_loop_process = start_audio_loop(looping_sound="prompts/chime_waiting_faster.wav")
-
-                    # Try using the model from the config. If it fails, use a backup model.
-                    response_text = get_response(text=input_text,
-                                                 model=config["response_model"])
-                    
-                except Exception as e:
-                    print(e)
-                    logging.info("Trying fallback response model: DEEPSEEK")
-                    response_text = get_response(text=input_text,
-                                                          model=config["fallback_response_model"])
-                    
-                finally:
-                    # Always stop the looping audio
-                    stop_audio_loop(audio_loop_process)
-                    
-                logging.info(f"Generated response text : {response_text}")
-            
-            else:
-                continue
-
-
-            # Text to speech.
-            if phone_picked_up():
-                logging.info("--- Text to speech")
-
-                audio_output_filepath = text_to_speech(text=response_text,
-                                                       output_audio_path="_output_tmp.wav",
-                                                       model=config["text_to_speech_model"])
-                logging.info(f"Saved output text : {audio_output_filepath}")
-            else:
-                continue
 
 
             # Play audio!
