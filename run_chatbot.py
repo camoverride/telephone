@@ -54,7 +54,7 @@ def main():
                     #                                     silence_timeout=config["silence_timeout"])
 
                     logging.info("--- Recording audio")
-                    recording_asr_noise_process = start_audio_loop(looping_sound="prompts/soft_blur.wav")
+                    recording_asr_noise_process = start_audio_loop(looping_sound="prompts/soft_background.wav")
 
                     audio_input_filepath = killable_record_audio_silero(
                                                 save_filepath="_input_tmp.wav",
