@@ -1,12 +1,19 @@
-import pyaudio
-import wave
-import time
-import numpy as np
-import torch
+import logging
 import multiprocessing
+import numpy as np
+import pyaudio
+import time
+import torch
+import wave
 from silero_vad import load_silero_vad, get_speech_timestamps
 from utils import phone_picked_up
 
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def killable_record_audio_silero(save_filepath: str,
@@ -25,18 +32,16 @@ def killable_record_audio_silero(save_filepath: str,
     )
 
     recording_proc.start()
-    print("Recording started in subprocess...")
+    logging.debug("Recording started in subprocess...")
 
     try:
         while recording_proc.is_alive():
             if not phone_picked_up():
-                print("Phone was placed down. Terminating recording...")
                 recording_proc.terminate()
                 recording_proc.join()
                 return None
             time.sleep(0.1)
     except KeyboardInterrupt:
-        print("Interrupted by user.")
         recording_proc.terminate()
         recording_proc.join()
         return None
@@ -100,8 +105,6 @@ def record_audio_with_silero_vad(save_filepath: str,
     last_speech_time = None
     recording_start_time = None
 
-    print("Listening... Speak into the mic.")
-
     try:
         while True:
             # Read from the audio stream, appending to te buffer too.
@@ -125,11 +128,9 @@ def record_audio_with_silero_vad(save_filepath: str,
             # Assuming a buffer of 1 sec, if greater than 0.3 is speech, it's real
             speech_duration = sum(ts['end'] - ts['start'] for ts in speech_timestamps)
 
-            # if len(speech_timestamps) > 0.3:
             if speech_duration > 0.5:
                 last_speech_time = time.time()
                 if not recording_started:
-                    print("Speech detected, start recording...")
                     recording_started = True
                     recording_start_time = time.time()
 
@@ -143,12 +144,12 @@ def record_audio_with_silero_vad(save_filepath: str,
 
                     # Check max recording duration (added)
                     if recording_elapsed >= max_recording_duration:
-                        print(f"Max recording duration {max_recording_duration}s reached, stopping.")
+                        logging.info(f"Max recording duration {max_recording_duration}s reached, stopping.")
                         break
 
                     # Only stop if silence passed AND minimum recording time is reached
                     if silence_elapsed >= silence_duration_to_stop and recording_elapsed >= min_recording_duration:
-                        print(f"Silence for {silence_elapsed:.2f}s after speech and minimum recording time reached, stopping.")
+                        logging.info(f"Silence for {silence_elapsed:.2f}s after speech and minimum recording time reached, stopping.")
                         break
                     else:
                         recorded_frames.extend(audio_buffer)
@@ -166,7 +167,7 @@ def record_audio_with_silero_vad(save_filepath: str,
         pa.terminate()
 
     if not recorded_frames:
-        print("No speech was detected. Returning None.")
+        logging.info("No speech was detected. Returning None.")
         return None
 
     recorded_audio = np.concatenate(recorded_frames)
@@ -177,7 +178,7 @@ def record_audio_with_silero_vad(save_filepath: str,
         wf.setframerate(sample_rate)
         wf.writeframes(recorded_audio.tobytes())
 
-    print(f"Audio saved to {save_filepath}")
+    logging.debug(f"Audio saved to {save_filepath}")
     return save_filepath
 
 

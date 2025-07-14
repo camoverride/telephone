@@ -1,11 +1,16 @@
-import os
-import subprocess
-import requests
-import pyttsx3
-import json
-import platform
 from gtts import gTTS
+import logging
+import os
+import platform
+import pyttsx3
+import subprocess
 
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def google_asr(text : str,
@@ -55,12 +60,12 @@ def command_line_say(text : str,
 
         # Use macOS TTS to generate AIFF
         subprocess.run(["say", "-o", filename_aiff, text])
-        print(f"Generated AIFF: {filename_aiff}")
+        logging.debug(f"Generated AIFF: {filename_aiff}")
 
         # Convert to WAV using ffmpeg
         subprocess.run(["ffmpeg", "-y", "-i", filename_aiff, output_audio_path],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"Converted to WAV: {output_audio_path}")
+        logging.debug(f"Converted to WAV: {output_audio_path}")
 
         # Cleanup
         os.remove(filename_aiff)

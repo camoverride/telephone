@@ -1,5 +1,6 @@
 import collections
 import os
+import logging
 import platform
 import pyaudio
 import random
@@ -9,6 +10,12 @@ import time
 import wave
 import webrtcvad
 
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # System-dependent import.
@@ -219,10 +226,10 @@ def record_audio(save_filepath: str,
                     speech_start_time = now
                     last_speech_time = now
                     frames.extend(pre_speech_buffer)
-                    print("Speech detected, starting recording...")
+                    logging.info("Speech detected, starting recording...")
 
                 elif now - function_start_time > speech_onset_timeout:
-                    print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
+                    logging.info(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
                     return None
 
                 if is_speech:
@@ -233,11 +240,11 @@ def record_audio(save_filepath: str,
                     # Add buffered pre-speech audio frames to recording frames
                     frames.extend(pre_speech_buffer)
 
-                    print("Speech detected, starting recording...")
+                    logging.info("Speech detected, starting recording...")
 
             # This check must be outside the inner `if` block
             if speech_start_time is None and now - function_start_time > speech_onset_timeout:
-                print(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
+                logging.info(f"No speech detected within {speech_onset_timeout} seconds, aborting.")
                 return None
 
             else:
@@ -251,12 +258,12 @@ def record_audio(save_filepath: str,
 
                 # Check if max_duration exceeded (count from speech start)
                 if speech_start_time is not None and now - speech_start_time > max_duration:
-                    print("Max duration reached, stopping recording.")
+                    logging.info("Max duration reached, stopping recording.")
                     break
 
                 # Check if silence timeout exceeded after last speech detected
                 if last_speech_time is not None and now - last_speech_time > silence_timeout:
-                    print("Silence timeout reached after speech, stopping recording.")
+                    logging.info("Silence timeout reached after speech, stopping recording.")
                     break
 
     finally:
@@ -266,7 +273,7 @@ def record_audio(save_filepath: str,
 
     # If no frames recorded (shouldn't happen, but safeguard)
     if not frames:
-        print("No audio recorded despite speech detection, returning None.")
+        logging.info("No audio recorded despite speech detection, returning None.")
         return None
 
     # Save recorded frames to WAV file
@@ -276,7 +283,7 @@ def record_audio(save_filepath: str,
         wf.setframerate(rate)
         wf.writeframes(b''.join(frames))
 
-    print(f"Audio saved to {save_filepath}")
+    logging.info(f"Audio saved to {save_filepath}")
 
     return save_filepath
 
@@ -365,14 +372,14 @@ def print_text(text : str,
     None
         Prints text.
     """
-    print(f"Printing this: {text}")
+    logging.info(f"Printing this: {text}")
     data = {"text": text}
 
     response = requests.post(printer_api,
                              json=data,
                              timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
 
-    print(response.json())
+    logging.debug(response.json())
 
 
 def start_audio_loop(looping_sound: str) -> subprocess.Popen:

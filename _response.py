@@ -1,15 +1,22 @@
+import logging
+import multiprocessing
 import numpy as np
 from openai import OpenAI
 import requests
-import sqlite3
-import yaml
-import time
-import multiprocessing
-from utils import phone_picked_up
-from models.markov._train_markov_model import load_model, generate_text
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+import sqlite3
+import time
+import yaml
+from models.markov._train_markov_model import load_model, generate_text
+from utils import phone_picked_up
 
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # Load config file
@@ -176,7 +183,7 @@ def tiny_llama_model(text: str) -> str:
         return response.json()["reply"]
 
     else:
-        print("Error:", response.status_code, response.text)
+        logging.warning("Error:", response.status_code, response.text)
 
         return "Model offline!"
 
@@ -301,7 +308,6 @@ def killable_get_response(text: str, model: str) -> str | None:
     try:
         while proc.is_alive():
             if not phone_picked_up():
-                print("Phone placed down. Terminating text generation...")
                 proc.terminate()
                 proc.join()
                 return None

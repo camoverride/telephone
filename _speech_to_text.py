@@ -1,11 +1,18 @@
-import wave
-import os
 import json
-import time
+import logging
 import multiprocessing
+import os
+import time
 from vosk import Model, KaldiRecognizer
+import wave
 from utils import phone_picked_up
 
+
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def vosk_asr(audio_file_path : str,
@@ -104,7 +111,7 @@ def killable_speech_to_text(audio_file_path: str,
     try:
         while proc.is_alive():
             if not phone_picked_up():
-                print("Phone placed down. Terminating speech-to-text process...")
+                logging.info("Phone placed down. Terminating speech-to-text process...")
                 proc.terminate()
                 proc.join()
                 return None

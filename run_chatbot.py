@@ -17,7 +17,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-
 # Load config file
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
@@ -63,11 +62,11 @@ def main():
                                                 min_recording_duration=config["min_recording_duration"],
                                                 max_recording_duration=config["max_recording_duration"])
         
-                    print(f"Saved audio to : \
+                    logging.debug(f"Saved audio to : \
                         {audio_input_filepath}")
                     
                 except Exception as e:
-                    print(e)
+                    logging.warning(e)
 
                 finally:
                     stop_audio_loop(recording_background_noise_process)
@@ -129,7 +128,7 @@ def main():
                                                         model=config["response_model"])
                             
                         except Exception as e:
-                            print(e)
+                            logging.warning(e)
                             logging.info("Trying fallback response model: DEEPSEEK")
                             response_text = get_response(text=input_text,
                                                                 model=config["fallback_response_model"])
@@ -154,7 +153,7 @@ def main():
 
                 # If there is an exception in ASR, Response, or TTS
                 except Exception as e:
-                    print(e)
+                    logging.warning(e)
                     continue
 
                 # Clean up the audio process
@@ -176,11 +175,11 @@ def main():
             try:
                 # Print the resulting text
                 print_text(text=response_text, printer_api=config["printer_server_url"])
-                print("Printing the text")
+                logging.info("Printing the text")
 
             # Continue to the next step even if this fails.
             except Exception as e:
-                print(e)
+                logging.warning(e)
 
 
             # Play the disconnected sound until the phone is returned to the hook.
@@ -190,7 +189,7 @@ def main():
 
 
         except Exception as e:
-            print(e)
+            logging.warning(e)
             continue
 
         # Small pause to prevent overheating and CPU from running too often.
