@@ -45,59 +45,71 @@ def main():
 
             # Audio recording.
             if phone_picked_up():
-                # audio_input_filepath = record_audio(save_filepath="_input_tmp.wav",
-                #                                     speech_onset_timeout=config["speech_onset_timeout"],
-                #                                     max_duration=config["recording_max_duration"],
-                #                                     silence_timeout=config["silence_timeout"])
+                recording_asr_noise_process = None
 
-                logging.info("--- Recording audio")
-                audio_input_filepath = killable_record_audio_silero(
-                                            save_filepath="_input_tmp.wav",
-                                            silence_duration_to_stop=config["silence_timeout"],
-                                            min_recording_duration=config["min_recording_duration"],
-                                            max_recording_duration=config["max_recording_duration"])
-    
-                print(f"Saved audio to : \
-                    {audio_input_filepath}")
-                
-            else:
-                continue
+                try:
+                    # audio_input_filepath = record_audio(save_filepath="_input_tmp.wav",
+                    #                                     speech_onset_timeout=config["speech_onset_timeout"],
+                    #                                     max_duration=config["recording_max_duration"],
+                    #                                     silence_timeout=config["silence_timeout"])
+
+                    logging.info("--- Recording audio")
+                    audio_loop_process = start_audio_loop(looping_sound="prompts/soft_blur.wav")
+
+                    audio_input_filepath = killable_record_audio_silero(
+                                                save_filepath="_input_tmp.wav",
+                                                silence_duration_to_stop=config["silence_timeout"],
+                                                min_recording_duration=config["min_recording_duration"],
+                                                max_recording_duration=config["max_recording_duration"])
+        
+                    print(f"Saved audio to : \
+                        {audio_input_filepath}")
+                    
 
 
-            # Speech to text.
-            if phone_picked_up():
-                logging.info("--- Performing ASR")
+                    # Speech to text.
+                    if phone_picked_up():
+                        logging.info("--- Performing ASR")
 
-                input_text = killable_speech_to_text(audio_file_path=audio_input_filepath,
-                                                     model=config["speech_to_text_model"])
-                
-                # Check if the audio input should be ignored (empty, contains profanity, etc.)
-                if ignored_phrases(input_text):
+                        input_text = killable_speech_to_text(audio_file_path=audio_input_filepath,
+                                                            model=config["speech_to_text_model"])
+                        
+                        # Check if the audio input should be ignored (empty, contains profanity, etc.)
+                        if ignored_phrases(input_text):
 
-                    if ignored_phrases == "hello":
-                        logging.info(f"Recognized text :  {input_text}")
-                        logging.info("IGNORING - hello message.")
+                            if ignored_phrases == "hello":
+                                logging.info(f"Recognized text :  {input_text}")
+                                logging.info("IGNORING - hello message.")
 
+                                continue
+
+                            if ignored_phrases == "nothing":
+                                logging.info(f"Recognized text :  {input_text}")
+                                logging.info("IGNORING - nothing recognized.")
+
+                                continue
+
+                            if ignored_phrases == "profanity":
+                                logging.info(f"Recognized text :  {input_text}")
+                                logging.info("IGNORING - contains profanity.")
+
+                                continue
+
+
+                            continue
+                        
+                        else:
+                            logging.info(f"Recognized text :  {input_text}")
+                    
+                    else:
                         continue
 
-                    if ignored_phrases == "nothing":
-                        logging.info(f"Recognized text :  {input_text}")
-                        logging.info("IGNORING - nothing recognized.")
+                except Exception as e:
+                    print(e)
 
-                        continue
+                finally:
+                    stop_audio_loop(recording_asr_noise_process)
 
-                    if ignored_phrases == "profanity":
-                        logging.info(f"Recognized text :  {input_text}")
-                        logging.info("IGNORING - contains profanity.")
-
-                        continue
-
-
-                    continue
-                
-                else:
-                    logging.info(f"Recognized text :  {input_text}")
-            
             else:
                 continue
 
