@@ -9,7 +9,7 @@ from utils import phone_picked_up
 
 
 
-def killable_record_audio_silero(save_path: str,
+def killable_record_audio_silero(save_filepath: str,
                                  silence_duration_to_stop: float,
                                  min_recording_duration: float,
                                  max_recording_duration: float):
@@ -17,7 +17,7 @@ def killable_record_audio_silero(save_path: str,
     recording_proc = multiprocessing.Process(
         target=record_audio_with_silero_vad,
         kwargs=dict(
-            save_filepath=save_path,
+            save_filepath=save_filepath,
             silence_duration_to_stop=silence_duration_to_stop,
             min_recording_duration=min_recording_duration,
             max_recording_duration=max_recording_duration
@@ -41,7 +41,7 @@ def killable_record_audio_silero(save_path: str,
         recording_proc.join()
         return None
 
-    return save_path if recording_proc.exitcode == 0 else None
+    return save_filepath if recording_proc.exitcode == 0 else None
 
 
 def record_audio_with_silero_vad(save_filepath: str,
