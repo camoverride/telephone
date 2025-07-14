@@ -51,7 +51,7 @@ def play_audio_interruptible(filepath : str,
     elif platform.system() == "Linux":
         if looping:
             process = subprocess.Popen(
-                ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", "-loop", "0", filepath],
+                ["ffplay", "-nodisp", "-loglevel", "quiet", "-loop", "0", filepath],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL)
 

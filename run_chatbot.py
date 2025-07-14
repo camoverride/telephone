@@ -135,7 +135,7 @@ def main():
             print("Printing the text")
 
 
-            # Play the disconnected sound as long as the phone is off the hook.
+            # Play the disconnected sound until the phone is returned to the hook.
             play_audio_interruptible(filepath="prompts/soft_blur.wav",
                                      looping=True)
                         
