@@ -145,6 +145,6 @@ def text_to_speech(text : str,
 
 if __name__ == "__main__":
 
-    TEXT = "Thanks for picking up. Is beauty the same for everyone? Say a few words and I'll respond with a haiku"
+    TEXT = "please carefully rip off your haiku and take it with you. Thanks for adding to the collective consciousness"
 
     google_asr(text=TEXT, output_audio_path="_tmp.wav")

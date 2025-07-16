@@ -181,6 +181,9 @@ def main():
             except Exception as e:
                 logging.warning(e)
 
+            # Play final "pick up your haiku"
+            play_audio_interruptible(filepath="prompts/rip_off_haiku.wav",
+                                     looping=False)
 
             # Play the disconnected sound until the phone is returned to the hook.
             play_audio_interruptible(filepath="prompts/hang_up_tone.mp3",
