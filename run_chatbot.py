@@ -87,8 +87,8 @@ def main():
                     if phone_picked_up():
                         logging.info("--- Performing ASR")
 
-                        input_text = killable_speech_to_text(audio_file_path=audio_input_filepath,
-                                                            model=config["speech_to_text_model"])
+                        input_text = killable_speech_to_text(audio_file_path="_input_tmp.wav",
+                                                             model=config["speech_to_text_model"])
                         
                         # Check if the audio input should be ignored (empty, contains profanity, etc.)
                         if ignored_phrases(input_text):
