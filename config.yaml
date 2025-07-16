@@ -4,6 +4,7 @@ starting_audio_prompt_dir: prompts/beauty
 prompt_closing_sound: prompts/beep_soft.wav
 
 # Recording parameters.
+recording_background_sound: prompts/musical_soft_background_softer.wav
 min_recording_duration: 5
 max_recording_duration: 25
 silence_timeout: 3
