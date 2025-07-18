@@ -34,5 +34,6 @@ printer_server_url: http://100.114.191.58:5000/print
 # Embedding database path if using the `vector_quotes` model.
 embedding_database_path: quote_embeddings.db
 
-# TTS model options: `command_line`, `google_tts`.
+# TTS model options: `command_line`, `google_tts`, `pytts`
+# NOTE: `google_tts` requires internet connection!
 text_to_speech_model: google_tts

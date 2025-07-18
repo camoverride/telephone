@@ -104,6 +104,29 @@ def command_line_say(text : str,
         return output_audio_path
 
 
+def pytts_asr(text : str,
+              output_audio_path : str) -> str:
+    """
+    Use the pyttsx3 model to perform speech synthesis.
+
+    Parameters
+    ----------
+    text : str
+        The words that will be spoken.
+    output_audio_path : str
+        Where the .wav file should be saved.
+    
+    Returns
+    -------
+    str
+        The `output_audio_path` (a wav file).
+    """
+    engine = pyttsx3.init()
+    engine.save_to_file(text, output_audio_path)
+    engine.runAndWait()
+    return output_audio_path
+
+
 def text_to_speech(text : str,
                    output_audio_path : str,
                    model : str) -> str:
@@ -118,10 +141,12 @@ def text_to_speech(text : str,
         Where the .wav file should be saved.
     model : str
         Which model to use. Current models:
-            - "say_macos"
+            - "command_line"
                 Simple `say` command line utility. NOTE: only MacOS.
-            - "pytts_pi"
-                PYTTS. NOTE: only on Raspbian.
+            - "google_tts"
+                Google TTS. NOTE: requires an internet connection.
+            - "pytts"    
+                Pytts library. NOTE: only on Raspbian.
     Returns
     -------
     str
@@ -137,6 +162,10 @@ def text_to_speech(text : str,
     if model == "google_tts":
         output_audio_path = google_asr(text=text,
                                        output_audio_path=output_audio_path)
+    
+    if model == "pytts":
+        output_audio_path = pytts_asr(text=text,
+                                      output_audio_path=output_audio_path)
 
     # Return is not strictly necessary, because it copies one of the args.
     return output_audio_path
