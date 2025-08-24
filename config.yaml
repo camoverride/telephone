@@ -1,10 +1,10 @@
 # When the phone is picked up, this audio plays after a certain delay, followed by a beep.
 prompt_start_delay: 1
-starting_audio_prompt_dir: prompts/beauty
-prompt_closing_sound: prompts/beep_soft.wav
+starting_audio_prompt_dir: prompts/1_start_prompt
+prompt_closing_sound: prompts/2_start_reply/beep_soft.wav
 
 # Recording parameters.
-recording_background_sound: prompts/musical_soft_background_softer.wav
+recording_background_sound: prompts/3_waiting_for_user_input/musical_soft_background_softer.wav
 min_recording_duration: 5
 max_recording_duration: 25
 silence_timeout: 3
@@ -15,7 +15,7 @@ speech_to_text_model: vosk
 
 # Response model options: 
 # `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`, `jason`.
-response_model: jason
+response_model: deepseek
 fallback_response_model: deepseek
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
