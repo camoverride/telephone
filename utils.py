@@ -1,6 +1,7 @@
 import collections
 import os
 import logging
+import multiprocessing
 import platform
 import pyaudio
 import random
@@ -9,6 +10,7 @@ import subprocess
 import time
 import wave
 import webrtcvad
+import threading
 
 
 
@@ -26,7 +28,7 @@ if platform.system() == "Linux":
     button = Button(17, bounce_time=0.05)
 
 
-def phone_picked_up() -> bool:
+def phone_picked_up() -> bool: # type:ignore
     """
     Returns True if the phone is picked up, otherwise False.
 
@@ -322,7 +324,8 @@ def play_audio(filename : str) -> None:
 with open("banned_words.txt", "r") as f:
     BANNED_WORDS = [line.rstrip('\n') for line in f]
 
-def ignored_phrases(text : str) -> bool:
+
+def ignored_phrases(text : str) -> bool | str:
     """
     Returns True if the text should be ignored and bypassed.
 
@@ -434,3 +437,84 @@ def stop_audio_loop(process: subprocess.Popen) -> None:
     """
     if process and process.poll() is None:
         process.terminate()
+
+
+
+class KillableFunction:
+    def __init__(self,
+                 func,
+                 *,
+                 args=(),
+                 kwargs=None,
+                 kill_check=lambda: False,
+                 check_interval=0.1,
+                 use_thread=False):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs if kwargs is not None else {}
+        self.kill_check = kill_check
+        self.check_interval = check_interval
+        self.use_thread = use_thread
+        self._result = None
+        self._exception = None
+
+        if not self.use_thread:
+            self._result_queue = multiprocessing.Queue()
+
+    def _target_process(self, result_queue):
+        try:
+            result = self.func(*self.args, **self.kwargs)
+            result_queue.put(('result', result))
+        except Exception as e:
+            result_queue.put(('error', e))
+
+    def _target_thread(self):
+        try:
+            self._result = self.func(*self.args, **self.kwargs)
+        except Exception as e:
+            self._exception = e
+
+    def run(self):
+        if self.use_thread:
+            thread = threading.Thread(target=self._target_thread)
+            thread.start()
+
+            while thread.is_alive():
+                if self.kill_check():
+                    logging.warning("Kill condition triggered. Cannot forcibly kill threads cleanly.")
+                    # Threads cannot be forcefully killed in Python, so just return None
+                    return None
+                time.sleep(self.check_interval)
+
+            thread.join()
+            if self._exception:
+                raise self._exception
+            return self._result
+        else:
+            process = multiprocessing.Process(target=self._target_process, args=(self._result_queue,))
+            process.start()
+
+            try:
+                while process.is_alive():
+                    if self.kill_check():
+                        logging.warning("Kill condition triggered. Terminating process.")
+                        process.terminate()
+                        process.join()
+                        return None
+                    time.sleep(self.check_interval)
+
+                process.join()
+                if not self._result_queue.empty():
+                    status, value = self._result_queue.get()
+                    if status == 'result':
+                        return value
+                    elif status == 'error':
+                        raise value
+                else:
+                    return None
+
+            except KeyboardInterrupt:
+                logging.warning("KeyboardInterrupt — terminating process.")
+                process.terminate()
+                process.join()
+                return None

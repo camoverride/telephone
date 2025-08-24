@@ -1,12 +1,12 @@
 import logging
-import multiprocessing
 import numpy as np
 import pyaudio
+import threading
 import time
 import torch
 import wave
 from silero_vad import load_silero_vad, get_speech_timestamps
-from utils import phone_picked_up
+from utils import phone_picked_up, KillableFunction
 
 
 
@@ -16,37 +16,40 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def killable_record_audio_silero(save_filepath: str,
-                                 silence_duration_to_stop: float,
-                                 min_recording_duration: float,
-                                 max_recording_duration: float):
-    # This wrapper starts the process and monitors it
-    recording_proc = multiprocessing.Process(
-        target=record_audio_with_silero_vad,
-        kwargs=dict(
-            save_filepath=save_filepath,
-            silence_duration_to_stop=silence_duration_to_stop,
-            min_recording_duration=min_recording_duration,
-            max_recording_duration=max_recording_duration
-        )
+# Global model storage
+silero_model = None
+model_ready_event = threading.Event()
+
+# Load model in a thread at startup
+def load_model_once():
+    global silero_model
+    silero_model = load_silero_vad()
+    silero_model.eval()  # type: ignore
+    model_ready_event.set()
+
+# Start model loading on import
+threading.Thread(target=load_model_once, daemon=True).start()
+
+
+
+
+
+
+
+# Killable wrapper function
+def killable_record_audio_silero(*args, **kwargs):
+    def should_kill():
+        return not phone_picked_up()
+
+    killable = KillableFunction(
+        func=record_audio_with_silero_vad,
+        args=args,
+        kwargs=kwargs,
+        kill_check=should_kill,
+        use_thread=True  # Make sure this uses a thread, not a process.
     )
+    return killable.run()
 
-    recording_proc.start()
-    logging.debug("Recording started in subprocess...")
-
-    try:
-        while recording_proc.is_alive():
-            if not phone_picked_up():
-                recording_proc.terminate()
-                recording_proc.join()
-                return None
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        recording_proc.terminate()
-        recording_proc.join()
-        return None
-
-    return save_filepath if recording_proc.exitcode == 0 else None
 
 
 def record_audio_with_silero_vad(save_filepath: str,
@@ -79,14 +82,18 @@ def record_audio_with_silero_vad(save_filepath: str,
     None
         if no speech detected or recording too short
     """
+    model_ready_event.wait()
+    model = silero_model
+
+
     buffer_duration = 1.0
     sample_rate = 16000
     chunk_size = 1024
 
-    # Load Silero VAD model once
-    model = load_silero_vad()
-    model.eval()
+    print('s1')
 
+
+    print('s2')
     # Audio recording object.
     pa = pyaudio.PyAudio()
     stream = pa.open(format=pyaudio.paInt16,
@@ -98,6 +105,7 @@ def record_audio_with_silero_vad(save_filepath: str,
     # Raw int16 numpy arrays waiting for VAD check
     audio_buffer = []
 
+    print('s3')
     # Frames after speech started
     recorded_frames = []
 
@@ -106,17 +114,20 @@ def record_audio_with_silero_vad(save_filepath: str,
     recording_start_time = None
 
     try:
+        buffer_duration = 0.3 # TODO: remove this!
+
         while True:
-            # Read from the audio stream, appending to te buffer too.
+            # Read from the audio stream, appending to the buffer too.
             data = stream.read(chunk_size, exception_on_overflow=False)
             audio_np = np.frombuffer(data, dtype=np.int16)
             audio_buffer.append(audio_np)
 
-            # Run VAD once we have enough audio buffered
+            # Run VAD once we have enough audio buffered.
             total_samples = sum(len(chunk) for chunk in audio_buffer)
+
             if total_samples < int(buffer_duration * sample_rate):
                 continue
-
+            print('s4')
             audio_for_vad = np.concatenate(audio_buffer)
             audio_tensor = torch.from_numpy(audio_for_vad).float() / 32768.0
 
@@ -128,6 +139,7 @@ def record_audio_with_silero_vad(save_filepath: str,
             # Assuming a buffer of 1 sec, if greater than 0.3 is speech, it's real
             speech_duration = sum(ts['end'] - ts['start'] for ts in speech_timestamps)
 
+            print('s5')
             if speech_duration > 0.5:
                 last_speech_time = time.time()
                 if not recording_started:
@@ -155,6 +167,7 @@ def record_audio_with_silero_vad(save_filepath: str,
                         recorded_frames.extend(audio_buffer)
                         audio_buffer = []
 
+                    print('s6')
                 else:
                     # Not recording yet, limit buffer to prevent memory bloat
                     max_buffer_samples = int(buffer_duration * sample_rate * 5)
@@ -172,6 +185,7 @@ def record_audio_with_silero_vad(save_filepath: str,
 
     recorded_audio = np.concatenate(recorded_frames)
 
+    print('s7')
     with wave.open(save_filepath, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
@@ -183,10 +197,12 @@ def record_audio_with_silero_vad(save_filepath: str,
 
 
 
+# Optional test runner
 if __name__ == "__main__":
 
-    record_audio_with_silero_vad(
-        save_filepath="vad_silero.wav",
-        silence_duration_to_stop=3.0,
-        min_recording_duration=5.0,
-        max_recording_duration=20.0)
+    for _ in range(3):
+        killable_record_audio_silero(
+            save_filepath="vad_silero.wav",
+            silence_duration_to_stop=3.0,
+            min_recording_duration=5.0,
+            max_recording_duration=20.0)
