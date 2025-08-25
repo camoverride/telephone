@@ -16,7 +16,7 @@ speech_to_text_model: vosk
 
 # Response model options: 
 # `echo`, `random_markov`, `tiny_llama`, `deepseek`.
-response_model: deepseek
+response_model: translate
 fallback_response_model: tiny_llama
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
@@ -31,4 +31,4 @@ printer_server_url: http://100.114.191.58:5000/print
 # TTS model options: `command_line`, `google_tts`, `pytts`
 # NOTE: `google_tts` requires internet connection!
 text_to_speech_model: google_tts
-language: "en"
+text_to_speech_language: zh-cn

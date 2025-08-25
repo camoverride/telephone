@@ -16,7 +16,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load config file.
-with open("config.yaml", "r") as f:
+with open("config_echo.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
@@ -137,7 +137,8 @@ def main():
                 try:
                     response_text = killable_get_response(
                         text=input_text,
-                        model=config["response_model"])
+                        model=config["response_model"],
+                        language=config["text_to_speech_language"])
 
                     logging.info(f"Generated response text : {response_text}")
 
@@ -147,7 +148,8 @@ def main():
                     logging.warning("Trying fallback response model: DEEPSEEK")
                     response_text = killable_get_response(
                         text=input_text,
-                        model=config["fallback_response_model"])
+                        model=config["fallback_response_model"],
+                        language=config["text_to_speech_language"])
 
                     logging.info(f"Generated response text [fallback model]: \
                                     {response_text}")
@@ -165,7 +167,8 @@ def main():
                 audio_output_filepath = killable_text_to_speech(
                     text=response_text,
                     output_audio_path="_output_tmp.wav",
-                    model=config["text_to_speech_model"])
+                    model=config["text_to_speech_model"],
+                    language=config["text_to_speech_language"])
 
                 logging.info(f"Saved output text : {audio_output_filepath}")
 

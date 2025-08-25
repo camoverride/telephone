@@ -37,7 +37,8 @@ def clean_text_for_tts(text : str) -> str:
 
 def google_asr(
     text : str,
-    output_audio_path : str):
+    output_audio_path : str,
+    language : str):
     """
     Use simple Google to perform TTS.
 
@@ -47,13 +48,16 @@ def google_asr(
         The text to be synthesized.
     output_audio_path : str
         Where the .wav file should be saved.
-    
+    lang : str
+        Language. "en", "zh-cn", etc.
+
     Returns
     -------
     str
         The `output_audio_path`
     """
-    tts = gTTS(text=text, lang='en')
+    tts = gTTS(text=text,
+               lang=language)
     tts.save(output_audio_path)
 
     return output_audio_path
@@ -132,7 +136,8 @@ def pytts_asr(
 def text_to_speech(
     text : str,
     output_audio_path : str,
-    model : str) -> str:
+    model : str,
+    language : str) -> str:
     """
     Converts some text to a .wav audio file.
 
@@ -150,6 +155,8 @@ def text_to_speech(
                 Google TTS. NOTE: requires an internet connection.
             - "pytts"    
                 Pytts library. NOTE: only on Raspbian.
+    language : str
+        The language. "en", "zh-cn", etc.
     Returns
     -------
     str
@@ -167,7 +174,8 @@ def text_to_speech(
     if model == "google_tts":
         output_audio_path = google_asr(
             text=text,
-            output_audio_path=output_audio_path)
+            output_audio_path=output_audio_path,
+            language=language)
     
     if model == "pytts":
         output_audio_path = pytts_asr(
@@ -182,15 +190,23 @@ def phone_is_down() -> bool:
     return not phone_picked_up()
 
 
-def tts_task(text: str, output_audio_path: str, model: str) -> str:
+def tts_task(
+    text : str,
+    output_audio_path : str,
+    model: str,
+    language : str) -> str:
     text = clean_text_for_tts(text)
-    return text_to_speech(text, output_audio_path, model)
+    return text_to_speech(text,
+                          output_audio_path,
+                          model,
+                          language)
 
 
 def killable_text_to_speech(
     text: str,
     output_audio_path: str,
     model: str,
+    language : str, 
     kill_check=phone_is_down,
     check_interval: float = 0.1
 ) -> str | None:
@@ -200,7 +216,7 @@ def killable_text_to_speech(
 
     killable = KillableFunction(
         func=tts_task,
-        args=(text, output_audio_path, model),
+        args=(text, output_audio_path, model, language),
         kill_check=kill_check,
         check_interval=check_interval,
         use_thread=False
@@ -215,4 +231,7 @@ if __name__ == "__main__":
 
     text = "the quick brown fox jumps over the lazy dog."
 
-    google_asr(text=text, output_audio_path="_tmp.wav")
+    google_asr(
+        text=text,
+        output_audio_path="_tmp.wav",
+        language="en")

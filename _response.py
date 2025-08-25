@@ -4,6 +4,8 @@ from openai import OpenAI
 import requests
 import time
 import yaml
+import asyncio
+from googletrans import Translator
 from models.markov._train_markov_model import load_model, generate_text
 from utils import phone_picked_up
 
@@ -19,6 +21,21 @@ logging.basicConfig(
 # This will pull API endpoints and the system prompt.
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
+
+
+
+
+async def translate(text : str,
+                    language : str):
+    """
+    
+    """
+    translator = Translator()
+    result = await translator.translate(text, dest=language)
+
+    print(f"------- {result.text} -------")
+    
+    return result.text
 
 
 def deepseek_model(
@@ -143,7 +160,8 @@ def random_markov_model(
 
 def get_response(
     text : str,
-    model : str) -> str | None:
+    model : str,
+    language : str) -> str | None:
     """
     Produces a text reply to a text input.
 
@@ -159,6 +177,8 @@ def get_response(
                 Random text from a trained markov model.
             - "tiny_llama"
                 A small LLM
+    language : str | None
+        Which language to translate to, if any.
 
     Returns
     ------
@@ -167,6 +187,10 @@ def get_response(
     """
     if model == "echo":
         response = text
+
+    elif model == "translate":
+        response = asyncio.run(translate(text=text, language=language))
+
 
     if model == "random_markov":
         response = random_markov_model(
@@ -182,16 +206,21 @@ def get_response(
             text=text,
             system_prompt=config["system_prompt"])
 
-    return response
+    return str(response)
 
 
 def _get_response_worker(
     text: str,
     model: str,
-    result_queue: multiprocessing.Queue):
+    result_queue: multiprocessing.Queue,
+    language : str):
     try:
         if model == "echo":
             response = text
+
+        elif model == "translate":
+            response = asyncio.run(translate(text=text, language=language))
+
 
         elif model == "random_markov":
             response = random_markov_model(
@@ -219,12 +248,13 @@ def _get_response_worker(
 
 def killable_get_response(
     text: str, 
-    model: str) -> str | None:
+    model: str,
+    language) -> str | None:
 
     result_queue = multiprocessing.Queue()
     proc = multiprocessing.Process(
         target=_get_response_worker,
-        args=(text, model, result_queue))
+        args=(text, model, result_queue, language))
     proc.start()
 
     try:
