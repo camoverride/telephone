@@ -1,11 +1,7 @@
 import logging
 import multiprocessing
-import numpy as np
 from openai import OpenAI
 import requests
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import sqlite3
 import time
 import yaml
 from models.markov._train_markov_model import load_model, generate_text
@@ -25,94 +21,11 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-# Initialize the embedding model
-EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
-
-def vector_quotes(text : str) -> str:
+def deepseek_model(
+    text: str,
+    system_prompt : str) -> str | None:
     """
-    Use the vector similarity between the user's speech (`text`) and
-    quotes from a database to find a similar quote.
-
-    Assumes a sqlite database with schema:
-    | author | quote | embedding |
-
-    NOTE: see `config.yaml` for the path to the embedding database
-
-    Parameters
-    ----------
-    text : str
-        Something said by a user.
-    
-    Returns
-    -------
-    str
-        The response from the deepseek model.
-    """
-    # Embed the text
-    text_embedding = EMBEDDING_MODEL.encode(text)
-
-    # Connect to the database and get all the (quote, vector) tuples.
-    conn = sqlite3.connect(config["embedding_database_path"])
-    cursor = conn.cursor()
-
-    # Fetch all quotes and embeddings
-    cursor.execute("SELECT author, quote, embedding FROM quotes")
-    rows = cursor.fetchall()
-
-    # Process embeddings (stored as bytes in SQLite)
-    authors = []
-    quotes = []
-    embeddings = []
-
-    for author, quote, embedding_bytes in rows:
-        authors.append(author)
-        quotes.append(quote)
-
-        # Convert blob back to numpy array
-        embeddings.append(np.frombuffer(embedding_bytes, dtype=np.float32))
-            
-    # Convert to 2D array
-    quote_embeddings = np.stack(embeddings)
-    
-    # Calculate similarities
-    similarities = cosine_similarity([text_embedding], quote_embeddings)
-    best_match_idx = np.argmax(similarities)
-    best_quote = quotes[best_match_idx]
-    
-    return best_quote
-
-
-def jason_frontend(text : str) -> str:
-    """
-    Gets a response from Jason's custom model.
-
-    Parameters
-    ----------
-    text : str
-        Something said by a user.
-    
-    Returns
-    -------
-    str
-        The response from Jason's custom model.
-    """
-    headers = {"Content-Type": "application/json"}
-    data = {"message": text}
-
-    response = requests.post(config["jason_url"],
-                             headers=headers,
-                             json=data,
-                             timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
-    response.raise_for_status()
-    result = response.json()
-
-    return result['user_response']['content']
-
-
-def deepseek_model(text: str) -> str:
-    """
-    Use the deepseek LLM to produce a response related to
-    the `text`.
+    Use the deepseek LLM to produce a response related to the text.
     
     NOTE: see `config.yaml` for the system prompt.
 
@@ -129,19 +42,21 @@ def deepseek_model(text: str) -> str:
     str
         The response from the deepseek model.
     """
+    # Locally saved API key.
     with open("deepseek_api_key.txt", "r") as f:
         deepseek_api_key = f.read().strip()
 
-
-    client = OpenAI(api_key=deepseek_api_key,
-                    base_url="https://api.deepseek.com")
+    # Access the client.
+    client = OpenAI(
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com")
 
     # Send request to the API.
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=[
             {"role": "system",
-             "content": config["system_prompt"]},
+             "content": system_prompt},
             {"role": "user",
              "content": text},
         ],
@@ -183,14 +98,18 @@ def tiny_llama_model(text: str) -> str:
         return response.json()["reply"]
 
     else:
-        logging.warning("Error:", response.status_code, response.text)
+        logging.warning(
+            "Error:",
+            response.status_code,
+            response.text)
 
         return "Model offline!"
 
 
-def random_markov_model(length : int,
-                        start_word : str,
-                        model_path : str) -> str:
+def random_markov_model(
+    length : int,
+    start_word : str,
+    model_path : str) -> str:
     """
     Uses a random markov model trained off some poetry.
 
@@ -222,8 +141,9 @@ def random_markov_model(length : int,
     return text
 
 
-def get_response(text : str,
-                 model : str) -> str:
+def get_response(
+    text : str,
+    model : str) -> str | None:
     """
     Produces a text reply to a text input.
 
@@ -257,13 +177,8 @@ def get_response(text : str,
         response = tiny_llama_model(text=text)
 
     if model == "deepseek":
-        response = deepseek_model(text)
-
-    if model == "vector_quotes":
-        response = vector_quotes(text)
-
-    if model == "jason":
-        response = jason_frontend(text)
+        response = deepseek_model(text=text,
+                                  system_prompt=config["system_prompt"])
 
     return response
 
@@ -282,13 +197,8 @@ def _get_response_worker(text: str, model: str, result_queue: multiprocessing.Qu
             response = tiny_llama_model(text=text)
 
         elif model == "deepseek":
-            response = deepseek_model(text)
-
-        elif model == "vector_quotes":
-            response = vector_quotes(text)
-
-        elif model == "jason":
-            response = jason_frontend(text)
+            response = deepseek_model(text=text,
+                                      system_prompt=config["system_prompt"])
 
         else:
             response = f"[Unknown model: {model}]"
@@ -296,6 +206,7 @@ def _get_response_worker(text: str, model: str, result_queue: multiprocessing.Qu
         result_queue.put(response)
 
     except Exception as e:
+        print(e)
         result_queue.put(None)
 
 
@@ -322,13 +233,3 @@ def killable_get_response(text: str, model: str) -> str | None:
         proc.terminate()
         proc.join()
         return None
-
-
-"""
-for model in models:
-    try:
-        generate_response(model)
-    except:
-        pass
-
-"""

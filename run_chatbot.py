@@ -1,13 +1,11 @@
 import time
 import yaml
 import logging
-from _speech_to_text import speech_to_text, killable_speech_to_text
+from utils import phone_picked_up, play_audio, ignored_phrases, print_text
+from _silero_vad import killable_record_audio_silero
+from _speech_to_text import killable_speech_to_text
 from _response import get_response, killable_get_response
-from _text_to_speech import text_to_speech
-from utils import play_prompt, phone_picked_up, ignored_phrases, \
-    record_audio, play_audio, print_text, start_audio_loop, stop_audio_loop, \
-    play_audio_interruptible
-from _silero_vad import record_audio_with_silero_vad, killable_record_audio_silero
+from _text_to_speech import text_to_speech # TODO: needs killable TTS
 
 
 
@@ -16,10 +14,15 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 # Load config file.
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
+
+# Define sounds that will be played and might need to be closed.
+starting_prompt = None
+beep = None
+thinking_sound = None
+hang_up_sound = None
 
 
 def main():
@@ -32,15 +35,24 @@ def main():
             if phone_picked_up():
                 logging.info("--- Playing starting prompt")
 
-                # Requires latency or this loop will run too often, consuming system resources.
-                time.sleep(0.1)
+                # Play the prompt after a delay. Closes automatically because looping=False.
+                starting_prompt = play_audio(
+                    filepath=config["starting_audio_prompt"],
+                    start_delay=config["prompt_start_delay"],
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                starting_prompt.start()
 
-                # Play the prompt and a "closing sound" (e.g. "beep") after a delay.
-                play_prompt(
-                    prompt_start_delay=config["prompt_start_delay"],
-                    starting_audio_prompt_dir=config["starting_audio_prompt_dir"],
-                    prompt_closing_sound=config["prompt_closing_sound"])
-            
+                # Play the beep sound. Closes automatically because looping=False.
+                beep = play_audio(
+                    filepath=config["prompt_closing_sound"],
+                    start_delay=0,
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                beep.start()
+
             # If the phone is not picked up, restart the while loop.
             else:
                 continue
@@ -49,92 +61,64 @@ def main():
             ########## STEP 2: Record speech using VAD ##########
             # Record speech from the user, stopping the recording when the user stops speaking.
             if phone_picked_up():
-                # Track this audio process to kill later.
-                recording_background_noise_process = None
+                logging.info("--- Recording audio")
 
-                try:
-                    logging.info("--- Recording audio")
+                # Play the recording sound. Keeps looping until closed.
+                recording_sound = play_audio(
+                    filepath=config["recording_background_sound"],
+                    start_delay=0,
+                    looping=True,
+                    blocking=False,
+                    killable=True)
+                recording_sound.start()
 
-                    # Play a background sound from `prompts/3_waiting_for_user_input`
-                    print("---1---")
-                    recording_background_noise_process = \
-                        start_audio_loop(looping_sound=config["recording_background_sound"])
+                # Start recording audio using VAD.
+                audio_input_filepath = \
+                    killable_record_audio_silero(
+                        save_filepath="_input_tmp.wav",
+                        silence_duration_to_stop=config["silence_timeout"],
+                        min_recording_duration=config["min_recording_duration"],
+                        max_recording_duration=config["max_recording_duration"])
 
-                    # Record and save audio from the user, ending the recording once
-                    # there has been either a gap in the speech `silence_timeout` or
-                    # `max_recording_duration` has been reached.
-                    print("---2--")
-                    audio_input_filepath = \
-                        killable_record_audio_silero(
-                            save_filepath="_input_tmp.wav",
-                            silence_duration_to_stop=config["silence_timeout"],
-                            min_recording_duration=config["min_recording_duration"],
-                            max_recording_duration=config["max_recording_duration"])
-        
-                    print("---3---")
-                    logging.debug(f"Saved audio to : \
-                        {audio_input_filepath}")
+                logging.debug(f"Saved audio to : \
+                    {audio_input_filepath}")
 
-                # Log all exceptions.
-                except Exception as e:
-                    logging.warning(e)
-
-                    # Restart the while loop.
-                    continue
-
-                # Make sure to clean up the background process.
-                finally:
-                    if recording_background_noise_process:
-                        stop_audio_loop(recording_background_noise_process)
+                # Stop the recording sound.
+                recording_sound.stop()
 
             # If the phone is not picked up, restart the while loop.
             else:
-                print("NNNNN")
                 continue
 
 
             ########## STEP 3: Speech Recognition ##########
             if phone_picked_up():
-                # Track this audio process to kill later.
-                asr_tts_background_noise_process = None
+                logging.info("--- Performing ASR")
 
-                try:
-                    logging.info("--- Performing ASR")
+                # Play the "thinking" sound. Keeps looping until closed.
+                # NOTE: this plays all the way through step 5.
+                thinking_sound = play_audio(
+                    filepath=config["thinking_sound"],
+                    start_delay=0,
+                    looping=True,
+                    blocking=False,
+                    killable=True)
+                thinking_sound.start()
 
-                    # Play a background sound from `prompts/4_thinking`.
-                    # NOTE: this continues through ASR, response, and TTS steps.
-                    asr_tts_background_noise_process = \
-                        start_audio_loop(looping_sound="prompts/4_thinking/chime_waiting_faster.wav")
+                # Perform Speech recognition on the audio file.
+                input_text = \
+                    killable_speech_to_text(
+                        audio_file_path="_input_tmp.wav",
+                        model=config["speech_to_text_model"])
 
-                    # Perform Speech recognition on the audio file.
-                    input_text = \
-                        killable_speech_to_text(
-                            audio_file_path="_input_tmp.wav",
-                            model=config["speech_to_text_model"])
+                logging.info(f"Recognized text :  {input_text}")
 
-                    logging.info(f"Recognized text :  {input_text}")
-
-                    # Check if the audio input should be ignored 
-                    # (empty, contains profanity, etc.)
-                    if input_text:
-                        if ignored_phrases(input_text):
-                            logging.info("IGNORING INPUT, continuing")
-                            continue
-                    else:
+                # Check if the audio input should be ignored 
+                # (empty, contains profanity, etc.)
+                if input_text:
+                    if ignored_phrases(input_text):
+                        logging.info("IGNORING INPUT, continuing")
                         continue
-
-                # Log all exceptions.
-                except Exception as e:
-                    logging.warning(e)
-
-                    # Make sure to clean up the background process.
-                    # This same sound should be continued through 
-                    # the next step if there is no error.
-                    if asr_tts_background_noise_process:
-                        stop_audio_loop(asr_tts_background_noise_process)
-
-                    # Restart the while loop.
-                    continue
 
             # If the phone is not picked up, restart the while loop.
             else:
@@ -142,55 +126,30 @@ def main():
 
 
             ########## STEP 4: Response generation ##########
-            response_text = None
-
             if phone_picked_up():
-
                 logging.info("--- Generating response")
+
+                # Try using the model from the config. If it fails, use a backup model.
                 try:
-                    # Try using the model from the config. 
-                    # If it fails, use a backup model.
-                    response_text = get_response(
+                    response_text = killable_get_response(
                         text=input_text,
                         model=config["response_model"])
-                    
+
                     logging.info(f"Generated response text : {response_text}")
 
                 # If there is an exception, try a fall-back model.
                 except Exception as e:
                     logging.warning(e)
+                    logging.warning("Trying fallback response model: DEEPSEEK")
+                    response_text = get_response(
+                        text=input_text,
+                        model=config["fallback_response_model"])
 
-                    # Fallback model.
-                    try:
-                        logging.info("Trying fallback response model: DEEPSEEK")
-                        response_text = get_response(
-                            text=input_text,
-                            model=config["fallback_response_model"])
-                        
-                        logging.info(f"Generated response text [fallback model]: \
-                                     {response_text}")
-
-                    # If the fallback model also fails, restart the while loop.
-                    except:
-                        # Make sure to clean up the background process.
-                        # This same sound should be continued through 
-                        # the next step if there is no error.
-                        if asr_tts_background_noise_process:
-                            stop_audio_loop(asr_tts_background_noise_process)
-                        continue
-
+                    logging.info(f"Generated response text [fallback model]: \
+                                    {response_text}")
 
             # If the phone is not picked up, restart the while loop.
             else:
-                # Make sure to clean up the background process.
-                # This same sound should be continued through 
-                # the next step if there is no error.
-                if asr_tts_background_noise_process:
-                    stop_audio_loop(asr_tts_background_noise_process)
-                continue
-
-            # If STEP 5 failed to generate a response, continue.
-            if response_text == None:
                 continue
 
 
@@ -198,74 +157,73 @@ def main():
             if phone_picked_up():
                 logging.info("--- Text to speech")
 
-                try:
-                    # Create output file with response.
-                    audio_output_filepath = text_to_speech(
-                        text=response_text,
-                        output_audio_path="_output_tmp.wav",
-                        model=config["text_to_speech_model"])
+                # Create output file with response.
+                audio_output_filepath = text_to_speech(
+                    text=response_text,
+                    output_audio_path="_output_tmp.wav",
+                    model=config["text_to_speech_model"])
 
-                    logging.info(f"Saved output text : {audio_output_filepath}")
+                logging.info(f"Saved output text : {audio_output_filepath}")
 
-                except Exception as e:
-                    logging.warning(e)
-                    continue
-
+            # If the phone is not picked up, restart the while loop.
             else:
-                # Make sure to clean up the background process.
-                # This same sound should be continued through 
-                # the next step if there is no error.
-                if asr_tts_background_noise_process:
-                    stop_audio_loop(asr_tts_background_noise_process)
-                    
                 continue
-
-            # Make sure to clean up the background process.
-            # This same sound should be continued through 
-            # the next step if there is no error.
-            if asr_tts_background_noise_process:
-                stop_audio_loop(asr_tts_background_noise_process)
-
 
 
             ########## STEP 6: Play audio! ##########
-            if phone_picked_up(): # TODO: make this killable
+            if phone_picked_up():
                 logging.info("--- Playing output")
 
-                play_audio(filename=audio_output_filepath)
+                # Stop the "thinking sound" that has been playing since Step 3.
+                thinking_sound.stop()
 
+                # Play the response.
+                response_audio = play_audio(
+                    filepath="_output_tmp.wav",
+                    start_delay=0,
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                response_audio.start()
+
+            # If the phone is not picked up, restart the while loop.
             else:
                 continue
 
 
-
             ########## STEP 7: Final actions ##########
-            try:
-                # Print the resulting text
-                print_text(
-                    text=response_text,
-                    printer_api=config["printer_server_url"])
-                logging.info("Printing the text")
+            # Print the resulting text.
+            # print_text(
+            #     text=response_text,
+            #     printer_api=config["printer_server_url"])
+            # logging.info("Printing the text")
 
-            # Continue to the next step even if this fails.
-            except Exception as e:
-                logging.warning(e)
-                continue
-
-            # Play final "pick up your haiku"
-            play_audio_interruptible(
-                filepath="prompts/5_end_prompt/hang_up_tone.mp3",
-                looping=False)
-
-            # Play the disconnected sound until the phone is returned to the hook.
-            play_audio_interruptible(
-                filepath="prompts/5_end_prompt/hang_up_tone.mp3",
-                looping=True)
+            # Play the hang up sound.
+            hang_up_sound = play_audio(
+                    filepath=config["end_interaction_sound"],
+                    start_delay=0,
+                    looping=True,
+                    blocking=True,
+                    killable=True)
+            hang_up_sound.start()
 
 
+        # If there is an exception, continue.
         except Exception as e:
             logging.warning("TOP LEVEL EXCEPTION!")
             logging.warning(e)
+            continue
+
+        # Stop any dangling sounds, if they still exist.
+        finally:
+            if starting_prompt:
+                starting_prompt.stop()
+            if beep:
+                beep.stop()
+            if thinking_sound:
+                thinking_sound.stop()
+            if hang_up_sound:
+                hang_up_sound.stop()
 
         # Small pause to prevent overheating and CPU from running too often.
         # Runs at the end of every loop through the response cycle.

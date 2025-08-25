@@ -16,24 +16,19 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-# Global model storage
+# Global model storage.
 silero_model = None
 model_ready_event = threading.Event()
 
-# Load model in a thread at startup
+# Load model in a thread at startup.
 def load_model_once():
     global silero_model
     silero_model = load_silero_vad()
     silero_model.eval()  # type: ignore
     model_ready_event.set()
 
-# Start model loading on import
+# Start model loading on import.
 threading.Thread(target=load_model_once, daemon=True).start()
-
-
-
-
-
 
 
 # Killable wrapper function
@@ -51,11 +46,11 @@ def killable_record_audio_silero(*args, **kwargs):
     return killable.run()
 
 
-
-def record_audio_with_silero_vad(save_filepath: str,
-                                 silence_duration_to_stop: float = 3.0,
-                                 min_recording_duration: float = 5.0,
-                                 max_recording_duration: float = 30.0) -> str | None:
+def record_audio_with_silero_vad(
+    save_filepath: str,
+    silence_duration_to_stop: float = 3.0,
+    min_recording_duration: float = 5.0,
+    max_recording_duration: float = 30.0) -> str | None:
     """
     Records audio from the mic using Silero VAD. Starts when speech is
     detected, stops after `silence_duration_to_stop` seconds of silence,
@@ -85,15 +80,10 @@ def record_audio_with_silero_vad(save_filepath: str,
     model_ready_event.wait()
     model = silero_model
 
-
     buffer_duration = 1.0
     sample_rate = 16000
     chunk_size = 1024
 
-    print('s1')
-
-
-    print('s2')
     # Audio recording object.
     pa = pyaudio.PyAudio()
     stream = pa.open(format=pyaudio.paInt16,
@@ -105,7 +95,6 @@ def record_audio_with_silero_vad(save_filepath: str,
     # Raw int16 numpy arrays waiting for VAD check
     audio_buffer = []
 
-    print('s3')
     # Frames after speech started
     recorded_frames = []
 
@@ -127,7 +116,7 @@ def record_audio_with_silero_vad(save_filepath: str,
 
             if total_samples < int(buffer_duration * sample_rate):
                 continue
-            print('s4')
+
             audio_for_vad = np.concatenate(audio_buffer)
             audio_tensor = torch.from_numpy(audio_for_vad).float() / 32768.0
 
@@ -139,7 +128,6 @@ def record_audio_with_silero_vad(save_filepath: str,
             # Assuming a buffer of 1 sec, if greater than 0.3 is speech, it's real
             speech_duration = sum(ts['end'] - ts['start'] for ts in speech_timestamps)
 
-            print('s5')
             if speech_duration > 0.5:
                 last_speech_time = time.time()
                 if not recording_started:
@@ -167,7 +155,6 @@ def record_audio_with_silero_vad(save_filepath: str,
                         recorded_frames.extend(audio_buffer)
                         audio_buffer = []
 
-                    print('s6')
                 else:
                     # Not recording yet, limit buffer to prevent memory bloat
                     max_buffer_samples = int(buffer_duration * sample_rate * 5)
@@ -185,7 +172,6 @@ def record_audio_with_silero_vad(save_filepath: str,
 
     recorded_audio = np.concatenate(recorded_frames)
 
-    print('s7')
     with wave.open(save_filepath, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
@@ -197,7 +183,6 @@ def record_audio_with_silero_vad(save_filepath: str,
 
 
 
-# Optional test runner
 if __name__ == "__main__":
 
     for _ in range(3):

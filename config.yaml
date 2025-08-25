@@ -1,22 +1,23 @@
-# When the phone is picked up, this audio plays after a certain delay, followed by a beep.
+# Interaction sounds.
+starting_audio_prompt: prompts/1_start_prompt/cameron_says_hello.wav
 prompt_start_delay: 1
-starting_audio_prompt_dir: prompts/1_start_prompt
 prompt_closing_sound: prompts/2_start_reply/beep_soft.wav
+recording_background_sound: prompts/3_waiting_for_user_input/musical_soft_background_softer.wav
+thinking_sound: "prompts/4_thinking/chime_waiting_faster.wav"
+end_interaction_sound: "prompts/5_end_prompt/hang_up_tone.mp3"
 
 # Recording parameters.
-recording_background_sound: prompts/3_waiting_for_user_input/musical_soft_background_softer.wav
 min_recording_duration: 5
 max_recording_duration: 25
 silence_timeout: 3
-speech_onset_timeout: 10 # deprecated.
 
 # ASR model options: `vosk`.
 speech_to_text_model: vosk
 
 # Response model options: 
-# `echo`, `random_markov`, `tiny_llama`, `deepseek`, `vector_quotes`, `jason`.
+# `echo`, `random_markov`, `tiny_llama`, `deepseek`.
 response_model: deepseek
-fallback_response_model: deepseek
+fallback_response_model: tiny_llama
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
 system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
@@ -24,15 +25,8 @@ system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
 # API endpoint if using tiny_llama.
 tiny_llama_api_url: "http://100.116.247.74:5000/generate"
 
-# API endpoint for Jason's custom model
-jason_url: "http://10.247.175.17:5000/listen"
-
 # API endpoint for the printer server
-# NOTE each Pi should hit a unique printer
 printer_server_url: http://100.114.191.58:5000/print
-
-# Embedding database path if using the `vector_quotes` model.
-embedding_database_path: quote_embeddings.db
 
 # TTS model options: `command_line`, `google_tts`, `pytts`
 # NOTE: `google_tts` requires internet connection!

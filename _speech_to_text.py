@@ -15,8 +15,9 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def vosk_asr(audio_file_path : str,
-             model_path: str) -> str:
+def vosk_asr(
+    audio_file_path : str,
+    model_path: str) -> str:
     """
     Uses vosk to perform ASR.
 
@@ -60,8 +61,9 @@ def vosk_asr(audio_file_path : str,
     return result_text
 
 
-def speech_to_text(audio_file_path : str,
-                   model : str) -> str:
+def speech_to_text(
+    audio_file_path : str,
+    model : str) -> str:
     """
     Extracts the speech from a given .wav file.
 
@@ -78,15 +80,17 @@ def speech_to_text(audio_file_path : str,
         The speech contained in the audio, if any exists.
     """
     if model == "vosk":
-        result_text = vosk_asr(audio_file_path=audio_file_path,
-                               model_path="models/vosk-model-small-en-us-0.15")
+        result_text = vosk_asr(
+            audio_file_path=audio_file_path,
+            model_path="models/vosk-model-small-en-us-0.15")
 
     return result_text
 
 
-def _speech_to_text_worker(audio_file_path: str,
-                           model: str,
-                           result_queue: multiprocessing.Queue):
+def _speech_to_text_worker(
+    audio_file_path: str,
+    model: str,
+    result_queue: multiprocessing.Queue):
     try:
         if model == "vosk":
             result_text = vosk_asr(
@@ -99,8 +103,9 @@ def _speech_to_text_worker(audio_file_path: str,
         result_queue.put(None)
 
 
-def killable_speech_to_text(audio_file_path: str,
-                            model: str) -> str | None:
+def killable_speech_to_text(
+    audio_file_path: str,
+    model: str) -> str | None:
     result_queue = multiprocessing.Queue()
     proc = multiprocessing.Process(
         target=_speech_to_text_worker,

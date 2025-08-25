@@ -8,8 +8,9 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-def print_text(text : str,
-               printer_api: str) -> None:
+def print_text(
+    text : str,
+    printer_api: str) -> None:
     """
     Sends some text to a thermal printer to be printed out.
 
@@ -40,4 +41,6 @@ if __name__ == "__main__":
     Tomato kisses, crisp crust sings
     Joy in every slice
     """
-    print_text(text=text, printer_api=config["printer_server_url"])
+    print_text(
+        text=text,
+        printer_api=config["printer_server_url"])

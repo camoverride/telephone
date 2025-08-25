@@ -1,8 +1,59 @@
 # Telephone ☎️ 
 
-The code for an interactive rotary telephone by [Cam Smith](https://smith.cam/).
+The code for an interactive rotary telephone chatbot by [Cam Smith](https://smith.cam/).
 
-**Check it out!** Presented at Publicdisplay.art with an interactive front-end by [Jason Reinhardt](https://jason-reinhardt.com/) in collaboration with [Seattle Future Arts](https://www.futurearts.co/).
+
+## Overview
+
+This project allows configuration of several different parts
+
+
+### Configuration
+
+Which hardware this is configured on:
+
+- *phone*: A custom rotary telephone described in the wiki that detects phone pick-up and put-down.
+- *standard*: A computer with a mic and speaker attached.
+
+
+### Chat Mode
+
+The overall conversation mode:
+
+- *echo*: repeats back whataver is heard.
+- *translate*: translates whatever is heard into a specified. language.
+- *chat*: returns a reply based on previous replies, chat format.
+
+
+### Voice
+
+Which text-to-speech (TTS) voice model should be used:
+
+- *google-tts*: google's TTS model, (requires an internet connection).
+- *terminal*: uses whichever local TTS software is on your machine (e.g. `say` on MacOS).
+- *jeff*: custom voice model based off Jeff Bezos.
+- *cam*: custom voice model based off the artist, Cam Smith.
+
+
+### Personality
+
+When using the *chat* mode, which personality will the agent have:
+
+- *deepseek-memoryless*: A one-off reply from the deepseek API, with no memory of previous chats.
+- *deepseek-remember*: A reply from the deepseek API, with a memory of previous chats.
+- *tinyllama-memoryless*: A reply from a locally configured tiny-llama API endpoint.
+- *markov*: A word-salad reply from a random markov model conditioned on Wikipedia text.
+
+
+### Sounds
+
+The sounds that are played at different points during the user interaction, saved in `prompts`:
+
+- *start-prompt*: the audio played at the beginning of an interaction (`prompts/1_start_prompt`).
+- *start-reply*: the audio played to indicate the end of *start-prompt* and beginning of *waiting-for-user-input* (`prompts/2_start_reply`).
+- *waiting-for-user-input*: the audio played while waiting for user input (`prompts/3_waiting_for_user_input`).
+- *thinking* : the audio played while waiting to generate a reply (`prompts/4_thinking`).
+- *end-prompt*: the audio played at the end of an interaction (`prompts/5_end_prompt`).
 
 
 ## Materials & Assembly Guide

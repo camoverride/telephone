@@ -33,8 +33,9 @@ def clean_text_for_tts(text : str) -> str:
     return cleaned
 
 
-def google_asr(text : str,
-               output_audio_path : str):
+def google_asr(
+    text : str,
+    output_audio_path : str):
     """
     Use simple Google to perform TTS.
 
@@ -56,8 +57,9 @@ def google_asr(text : str,
     return output_audio_path
 
 
-def command_line_say(text : str,
-                     output_audio_path : str) -> str:
+def command_line_say(
+    text : str,
+    output_audio_path : str) -> str:
     """
     Use simple command line tools to perform TTS.
     Automatically detects whether we are on Pi or MacOS.
@@ -88,10 +90,7 @@ def command_line_say(text : str,
         logging.debug(f"Converted to WAV: {output_audio_path}")
 
         # Cleanup
-        os.remove(filename_aiff)
-
-        return output_audio_path
-    
+        os.remove(filename_aiff)    
 
     # Linux / Pi
     elif platform.system() == "Linux":
@@ -101,11 +100,12 @@ def command_line_say(text : str,
         engine.save_to_file(text, output_audio_path)
         engine.runAndWait()
 
-        return output_audio_path
+    return output_audio_path
 
 
-def pytts_asr(text : str,
-              output_audio_path : str) -> str:
+def pytts_asr(
+    text : str,
+    output_audio_path : str) -> str:
     """
     Use the pyttsx3 model to perform speech synthesis.
 
@@ -127,9 +127,10 @@ def pytts_asr(text : str,
     return output_audio_path
 
 
-def text_to_speech(text : str,
-                   output_audio_path : str,
-                   model : str) -> str:
+def text_to_speech(
+    text : str,
+    output_audio_path : str,
+    model : str) -> str:
     """
     Converts some text to a .wav audio file.
 
@@ -152,20 +153,24 @@ def text_to_speech(text : str,
     str
         The `output_audio_path`
     """
-    # Purge unwanted characters from the text
+    # Purge unwanted characters from the text.
     text = clean_text_for_tts(text)
 
     # Choose the right model.
     if model == "command_line":
-        output_audio_path = command_line_say(text=text,
-                                             output_audio_path=output_audio_path)
+        output_audio_path = command_line_say(
+            text=text,
+            output_audio_path=output_audio_path)
+
     if model == "google_tts":
-        output_audio_path = google_asr(text=text,
-                                       output_audio_path=output_audio_path)
+        output_audio_path = google_asr(
+            text=text,
+            output_audio_path=output_audio_path)
     
     if model == "pytts":
-        output_audio_path = pytts_asr(text=text,
-                                      output_audio_path=output_audio_path)
+        output_audio_path = pytts_asr(
+            text=text,
+            output_audio_path=output_audio_path)
 
     # Return is not strictly necessary, because it copies one of the args.
     return output_audio_path
@@ -174,6 +179,6 @@ def text_to_speech(text : str,
 
 if __name__ == "__main__":
 
-    TEXT = "please carefully rip off your haiku and take it with you. Thanks for adding to the collective consciousness"
+    text = "the quick brown fox jumps over the lazy dog."
 
-    google_asr(text=TEXT, output_audio_path="_tmp.wav")
+    google_asr(text=text, output_audio_path="_tmp.wav")

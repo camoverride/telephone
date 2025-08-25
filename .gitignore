@@ -4,6 +4,7 @@ __pycache__
 # Temp audio files
 _input_tmp.wav
 _output_tmp.wav
+_tmp.wav
 
 # Temp model files
 **.zip
@@ -13,6 +14,5 @@ _output_tmp.wav
 # API keys
 deepseek_api_key.txt
 
-# Database files
-*.db
-*.xlsx
+# Banned words file
+banned_words.txt
