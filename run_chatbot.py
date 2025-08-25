@@ -135,24 +135,32 @@ def main():
 
                 # Try using the model from the config. If it fails, use a backup model.
                 try:
-                    response_text = killable_get_response(
-                        text=input_text,
-                        model=config["response_model"],
-                        language=config["text_to_speech_language"])
+                    if input_text:
+                        response_text = killable_get_response(
+                            text=input_text,
+                            model=config["response_model"],
+                            language=config["text_to_speech_language"])
 
-                    logging.info(f"Generated response text : {response_text}")
+                        logging.info(f"Generated response text : {response_text}")
+                    else:
+                        raise TypeError("input_text is None!")
 
                 # If there is an exception, try a fall-back model.
                 except Exception as e:
                     logging.warning(e)
                     logging.warning("Trying fallback response model: DEEPSEEK")
-                    response_text = killable_get_response(
-                        text=input_text,
-                        model=config["fallback_response_model"],
-                        language=config["text_to_speech_language"])
 
-                    logging.info(f"Generated response text [fallback model]: \
-                                    {response_text}")
+                    if input_text:
+                        response_text = killable_get_response(
+                            text=input_text,
+                            model=config["fallback_response_model"],
+                            language=config["text_to_speech_language"])
+
+                        logging.info(f"Generated response text [fallback model]: \
+                                        {response_text}")
+                    else:
+                        raise TypeError("input_text is None!")
+                        
 
             # If the phone is not picked up, restart the while loop.
             else:
@@ -164,13 +172,16 @@ def main():
                 logging.info("--- Text to speech")
 
                 # Create output file with response.
-                audio_output_filepath = killable_text_to_speech(
-                    text=response_text,
-                    output_audio_path="_output_tmp.wav",
-                    model=config["text_to_speech_model"],
-                    language=config["text_to_speech_language"])
+                if response_text:
+                    audio_output_filepath = killable_text_to_speech(
+                        text=response_text,
+                        output_audio_path="_output_tmp.wav",
+                        model=config["text_to_speech_model"],
+                        language=config["text_to_speech_language"])
 
-                logging.info(f"Saved output text : {audio_output_filepath}")
+                    logging.info(f"Saved output text : {audio_output_filepath}")
+                else:
+                    raise TypeError("response_text is None!")
 
             # If the phone is not picked up, restart the while loop.
             else:
