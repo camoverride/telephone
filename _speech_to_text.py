@@ -5,7 +5,7 @@ import os
 import time
 from vosk import Model, KaldiRecognizer
 import wave
-from utils import phone_picked_up
+from utils import phone_picked_up, PhonePutDownError
 
 
 
@@ -116,6 +116,7 @@ def killable_speech_to_text(
     try:
         while proc.is_alive():
             if not phone_picked_up():
+                raise PhonePutDownError
                 logging.info("Phone placed down. Terminating speech-to-text process...")
                 proc.terminate()
                 proc.join()

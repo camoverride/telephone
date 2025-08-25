@@ -1,11 +1,12 @@
 import time
+import traceback
 import yaml
 import logging
 from utils import phone_picked_up, play_audio, ignored_phrases, print_text
 from _silero_vad import killable_record_audio_silero
 from _speech_to_text import killable_speech_to_text
-from _response import get_response, killable_get_response
-from _text_to_speech import text_to_speech # TODO: needs killable TTS
+from _response import killable_get_response
+from _text_to_speech import killable_text_to_speech
 
 
 
@@ -18,14 +19,17 @@ logging.basicConfig(
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-# Define sounds that will be played and might need to be closed.
-starting_prompt = None
-beep = None
-thinking_sound = None
-hang_up_sound = None
 
 
 def main():
+    # Define sounds that will be played and might need to be closed.
+    starting_prompt = None
+    beep = None
+    recording_sound = None
+    thinking_sound = None
+    hang_up_sound = None
+    response_audio = None
+
     # Main event loop that should always run, catching errors and continuing
     # from the beginning if the phone reciever is put down.
     while True:
@@ -80,11 +84,11 @@ def main():
                         min_recording_duration=config["min_recording_duration"],
                         max_recording_duration=config["max_recording_duration"])
 
-                logging.debug(f"Saved audio to : \
-                    {audio_input_filepath}")
+                logging.debug(f"Saved audio to : {audio_input_filepath}")
 
                 # Stop the recording sound.
-                recording_sound.stop()
+                if recording_sound and hasattr(recording_sound, "stop"):
+                    recording_sound.stop()
 
             # If the phone is not picked up, restart the while loop.
             else:
@@ -141,7 +145,7 @@ def main():
                 except Exception as e:
                     logging.warning(e)
                     logging.warning("Trying fallback response model: DEEPSEEK")
-                    response_text = get_response(
+                    response_text = killable_get_response(
                         text=input_text,
                         model=config["fallback_response_model"])
 
@@ -158,7 +162,7 @@ def main():
                 logging.info("--- Text to speech")
 
                 # Create output file with response.
-                audio_output_filepath = text_to_speech(
+                audio_output_filepath = killable_text_to_speech(
                     text=response_text,
                     output_audio_path="_output_tmp.wav",
                     model=config["text_to_speech_model"])
@@ -175,7 +179,8 @@ def main():
                 logging.info("--- Playing output")
 
                 # Stop the "thinking sound" that has been playing since Step 3.
-                thinking_sound.stop()
+                if thinking_sound and hasattr(thinking_sound, "stop"):
+                    thinking_sound.stop()
 
                 # Play the response.
                 response_audio = play_audio(
@@ -200,30 +205,35 @@ def main():
 
             # Play the hang up sound.
             hang_up_sound = play_audio(
-                    filepath=config["end_interaction_sound"],
-                    start_delay=0,
-                    looping=True,
-                    blocking=True,
-                    killable=True)
+                filepath=config["end_interaction_sound"],
+                start_delay=0,
+                looping=True,
+                blocking=True,
+                killable=True)
             hang_up_sound.start()
 
 
         # If there is an exception, continue.
         except Exception as e:
             logging.warning("TOP LEVEL EXCEPTION!")
-            logging.warning(e)
+            logging.warning(traceback.format_exc())
             continue
 
-        # Stop any dangling sounds, if they still exist.
+
         finally:
-            if starting_prompt:
+            # Stop any dangling sounds, if they still exist.
+            if starting_prompt and hasattr(starting_prompt, "stop"):
                 starting_prompt.stop()
-            if beep:
+            if beep and hasattr(beep, "stop"):
                 beep.stop()
-            if thinking_sound:
+            if recording_sound and hasattr(recording_sound, "stop"):
+                recording_sound.stop()
+            if thinking_sound and hasattr(thinking_sound, "stop"):
                 thinking_sound.stop()
-            if hang_up_sound:
+            if hang_up_sound and hasattr(hang_up_sound, "stop"):
                 hang_up_sound.stop()
+            if response_audio and hasattr(response_audio, "stop"):
+                response_audio.stop()
 
         # Small pause to prevent overheating and CPU from running too often.
         # Runs at the end of every loop through the response cycle.
@@ -235,11 +245,3 @@ if __name__ == "__main__":
 
     # TODO: move config down here and load into function args, to add transparency
     main()
-
-
-    """
-    TODO: all functions should have the OPTION to be killable!
-    ---- generic killable function wrapper!
-
-    asr model is loaded each loop, meaning it is slow and begins to miss the beginnins
-    """

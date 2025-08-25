@@ -102,6 +102,8 @@ If using the vector_quotes model, first download the quotes spreadsheet as an Ex
 
 - `python run_chatbot.py 2>/dev/null`
 
+To simulate the phone being put down, press 'q' + ENTER.
+
 
 ## Run in Production
 

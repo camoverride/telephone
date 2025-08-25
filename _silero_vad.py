@@ -6,7 +6,7 @@ import time
 import torch
 import wave
 from silero_vad import load_silero_vad, get_speech_timestamps
-from utils import phone_picked_up, KillableFunction
+from utils import phone_picked_up, KillableFunction, PhonePutDownError
 
 
 
@@ -34,6 +34,8 @@ threading.Thread(target=load_model_once, daemon=True).start()
 # Killable wrapper function
 def killable_record_audio_silero(*args, **kwargs):
     def should_kill():
+        if phone_picked_up() == False:
+            raise PhonePutDownError
         return not phone_picked_up()
 
     killable = KillableFunction(
@@ -103,9 +105,10 @@ def record_audio_with_silero_vad(
     recording_start_time = None
 
     try:
-        buffer_duration = 0.3 # TODO: remove this!
-
         while True:
+            if not phone_picked_up():
+                raise PhonePutDownError()
+    
             # Read from the audio stream, appending to the buffer too.
             data = stream.read(chunk_size, exception_on_overflow=False)
             audio_np = np.frombuffer(data, dtype=np.int16)

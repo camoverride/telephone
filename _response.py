@@ -26,8 +26,6 @@ def deepseek_model(
     system_prompt : str) -> str | None:
     """
     Use the deepseek LLM to produce a response related to the text.
-    
-    NOTE: see `config.yaml` for the system prompt.
 
     NOTE: temperature is hard-coded to 1.5, for poetry.
     See: https://api-docs.deepseek.com/quick_start/parameter_settings
@@ -88,9 +86,10 @@ def tiny_llama_model(text: str) -> str:
     full_prompt = f"Human: {config['system_prompt']} {text} ### Assistant:"
 
     # Hit the API endpoint.
-    response = requests.post(url=config["tiny_llama_api_url"],
-                             json={"prompt": full_prompt},
-                             headers={"Content-Type": "application/json"})
+    response = requests.post(
+        url=config["tiny_llama_api_url"],
+        json={"prompt": full_prompt},
+        headers={"Content-Type": "application/json"})
 
     # Check the server's response.
     if response.ok:
@@ -134,9 +133,10 @@ def random_markov_model(
     loaded_model = load_model(model_path)
 
     # Generate and print text
-    text = generate_text(loaded_model,
-                         start_word=start_word,
-                         length=length)
+    text = generate_text(
+        loaded_model,
+        start_word=start_word,
+        length=length)
 
     return text
 
@@ -169,36 +169,43 @@ def get_response(
         response = text
 
     if model == "random_markov":
-        response = random_markov_model(length=30,
-                                       start_word="the",
-                                       model_path="models/markov/_random_poems_model.pkl")
+        response = random_markov_model(
+            length=30,
+            start_word="the",
+            model_path="models/markov/_random_poems_model.pkl")
 
     if model == "tiny_llama":
         response = tiny_llama_model(text=text)
 
     if model == "deepseek":
-        response = deepseek_model(text=text,
-                                  system_prompt=config["system_prompt"])
+        response = deepseek_model(
+            text=text,
+            system_prompt=config["system_prompt"])
 
     return response
 
 
-def _get_response_worker(text: str, model: str, result_queue: multiprocessing.Queue):
+def _get_response_worker(
+    text: str,
+    model: str,
+    result_queue: multiprocessing.Queue):
     try:
         if model == "echo":
             response = text
 
         elif model == "random_markov":
-            response = random_markov_model(length=30,
-                                           start_word="the",
-                                           model_path="models/markov/_random_poems_model.pkl")
+            response = random_markov_model(
+                length=30,
+                start_word="the",
+                model_path="models/markov/_random_poems_model.pkl")
 
         elif model == "tiny_llama":
             response = tiny_llama_model(text=text)
 
         elif model == "deepseek":
-            response = deepseek_model(text=text,
-                                      system_prompt=config["system_prompt"])
+            response = deepseek_model(
+                text=text,
+                system_prompt=config["system_prompt"])
 
         else:
             response = f"[Unknown model: {model}]"
@@ -210,10 +217,14 @@ def _get_response_worker(text: str, model: str, result_queue: multiprocessing.Qu
         result_queue.put(None)
 
 
-def killable_get_response(text: str, model: str) -> str | None:
+def killable_get_response(
+    text: str, 
+    model: str) -> str | None:
+
     result_queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(target=_get_response_worker,
-                                   args=(text, model, result_queue))
+    proc = multiprocessing.Process(
+        target=_get_response_worker,
+        args=(text, model, result_queue))
     proc.start()
 
     try:

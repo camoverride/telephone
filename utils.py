@@ -2,7 +2,9 @@ import logging
 import multiprocessing
 import platform
 import requests
+import select
 import subprocess
+import sys
 import threading
 import time
 
@@ -15,8 +17,12 @@ logging.basicConfig(
 
 
 # Read all the banned words into a list.
-with open("banned_words.txt", "r") as f:
-    BANNED_WORDS = [line.rstrip('\n') for line in f]
+BANNED_WORDS = None
+try:
+    with open("banned_words.txt", "r") as f:
+        BANNED_WORDS = [line.rstrip('\n') for line in f]
+except FileNotFoundError:
+    logging.warning("WARNING: no './banned_words.txt' file - please create one!")
 
 
 # System-dependent import. Get The GPIO pins on Raspbian.
@@ -27,6 +33,14 @@ if platform.system() == "Linux":
 
     # GPIO 17 with 50ms debounce time.
     button = Button(17, bounce_time=0.05)
+
+
+class PhonePutDownError(Exception):
+    """
+    Exception raised when the phone is put down.
+    """
+    def __init__(self, message="Phone put down"):
+        super().__init__(message)
 
 
 def phone_picked_up() -> bool: # type:ignore  Type not recognized.
@@ -48,10 +62,26 @@ def phone_picked_up() -> bool: # type:ignore  Type not recognized.
             The phone is placed down.
     """
     if platform.system() == "Darwin":
+        # Wait max 0.1 seconds for input
+        i, _, _ = select.select([sys.stdin], [], [], 0.1)
+
+        if i:
+            user_input = sys.stdin.readline().strip()
+            if user_input.lower() == "q":
+
+                # Should raise a custom error!
+                # raise PhonePutDownError
+                return False
+
         return True
 
     elif platform.system() == "Linux":
-        return button.is_pressed
+        if button.is_pressed:
+            return True
+        
+        else:
+            # raise PhonePutDownError
+            return False
 
 
 def ignored_phrases(text : str) -> bool:
@@ -80,8 +110,9 @@ def ignored_phrases(text : str) -> bool:
         return True
 
     # Check if there are banned words in the input.
-    if any(word in text.lower() for word in BANNED_WORDS):
-        return True
+    if BANNED_WORDS:
+        if any(word in text.lower() for word in BANNED_WORDS):
+            return True
 
     return False
 
@@ -206,54 +237,61 @@ class play_audio:
         """
         while self.process and self.process.poll() is None:
             if not phone_picked_up():
+                raise PhonePutDownError
                 logging.info("Phone put down — terminating audio.")
                 self.stop()
                 break
             time.sleep(0.1)
 
     def start(self) -> None:
-        """
-        Begins playback of the audio file. Respects the options specified at init:
-            - Applies a start delay.
-            - Repeats playback if `looping=True`.
-            - Blocks the caller if `blocking=True`, otherwise runs in a background thread.
-            - Terminates early if `killable=True` and `phone_picked_up()` returns False.
-        """
         if self.start_delay > 0:
             time.sleep(self.start_delay)
 
-        # Reset internal flag (useful if reusing the object).
         self._looping = True
 
         def play_loop():
             while self._looping:
                 if self.killable and not phone_picked_up():
+                    raise PhonePutDownError
                     logging.info("Phone put down — terminating audio.")
                     self.stop()
                     break
 
-                # Start playback.
                 command = self._build_command()
                 self.process = subprocess.Popen(
                     command,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
+                    stderr=subprocess.DEVNULL
+                )
 
-                # Wait for process to complete (or be killed).
-                self.process.wait()
+                if self.blocking:
+                    # Poll subprocess and phone state in a tight loop for killability
+                    while True:
+                        if self.process.poll() is not None:
+                            # Playback finished naturally
+                            break
+                        if self.killable and not phone_picked_up():
+                            raise PhonePutDownError
+                            logging.info("Phone put down — terminating audio during playback.")
+                            self.stop()
+                            break
+                        time.sleep(0.1)
 
-                # Stop loop after one play if not looping.
-                if not self.looping:
-                    break
+                    if not self.looping or not self._looping:
+                        break
 
-        # Play as a blocking function.
+                else:
+                    # Non-blocking, just start process and return (kill monitor elsewhere)
+                    self.process.wait()
+                    if not self.looping or not self._looping:
+                        break
+
         if self.blocking:
             play_loop()
-
-        # Run the loop in a background thread.
         else:
             thread = threading.Thread(target=play_loop, daemon=True)
             thread.start()
+
 
 
     def stop(self) -> None:

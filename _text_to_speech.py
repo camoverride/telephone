@@ -5,6 +5,8 @@ import platform
 import pyttsx3
 import re
 import subprocess
+from utils import KillableFunction
+from utils import phone_picked_up
 
 
 
@@ -174,6 +176,38 @@ def text_to_speech(
 
     # Return is not strictly necessary, because it copies one of the args.
     return output_audio_path
+
+
+def phone_is_down() -> bool:
+    return not phone_picked_up()
+
+
+def tts_task(text: str, output_audio_path: str, model: str) -> str:
+    text = clean_text_for_tts(text)
+    return text_to_speech(text, output_audio_path, model)
+
+
+def killable_text_to_speech(
+    text: str,
+    output_audio_path: str,
+    model: str,
+    kill_check=phone_is_down,
+    check_interval: float = 0.1
+) -> str | None:
+    """
+    Converts text to speech, allowing early termination via a kill check.
+    """
+
+    killable = KillableFunction(
+        func=tts_task,
+        args=(text, output_audio_path, model),
+        kill_check=kill_check,
+        check_interval=check_interval,
+        use_thread=False
+    )
+
+    return killable.run()
+
 
 
 
