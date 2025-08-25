@@ -25,15 +25,26 @@ with open("config.yaml", "r") as f:
 
 
 
-async def translate(text : str,
-                    language : str):
+async def translate(
+    text : str,
+    language : str):
     """
-    
+    Translates text from English into a target language.
+
+    Parameters
+    ----------
+    text : str
+        Some input text.
+    language : str
+        The desired output language: "fr", "zh-cn", etc.
+
+    Returns
+    -------
+    str
+        The text, translated.
     """
     translator = Translator()
     result = await translator.translate(text, dest=language)
-
-    print(f"------- {result.text} -------")
     
     return result.text
 
