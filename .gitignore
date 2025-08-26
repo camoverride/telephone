@@ -17,3 +17,6 @@ banned_words.txt
 
 # Prerecorded datasets
 data/
+
+# Logs
+logs/*.log
