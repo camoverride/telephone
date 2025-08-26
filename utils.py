@@ -1,8 +1,10 @@
 import logging
 import multiprocessing
+import numpy as np
 import platform
 import requests
 import select
+from sentence_transformers import SentenceTransformer
 import subprocess
 import sys
 import threading
@@ -33,6 +35,10 @@ if platform.system() == "Linux":
 
     # GPIO 17 with 50ms debounce time.
     button = Button(17, bounce_time=0.05)
+
+
+# Load the model once at module level for efficiency
+_embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
 class PhonePutDownError(Exception):
@@ -399,3 +405,22 @@ class KillableFunction:
                 process.terminate()
                 process.join()
                 return None
+
+
+def create_embedding(text: str) -> np.ndarray:
+    """
+    Create a sentence embedding from text using SentenceTransformer.
+
+    Parameters
+    ----------
+    text : str
+        Input text to embed.
+
+    Returns
+    -------
+    np.ndarray
+        Vector embedding of the input text.
+    """
+    embedding = _embedding_model.encode(text)
+
+    return embedding  # type: ignore

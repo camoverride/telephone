@@ -7,7 +7,7 @@ from _silero_vad import killable_record_audio_silero
 from _speech_to_text import killable_speech_to_text
 from _response import killable_get_response
 from _text_to_speech import killable_text_to_speech
-
+import utils  # This will load and initialize everything, including SentenceTransformer
 
 
 # Set up logging configuration.
@@ -16,7 +16,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load config file.
-with open("config_echo.yaml", "r") as f:
+with open("config_jeff.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
@@ -198,7 +198,8 @@ def main():
 
                 # Play the response.
                 response_audio = play_audio(
-                    filepath="_output_tmp.wav",
+                    # filepath="_output_tmp.wav",
+                    filepath=response_text,
                     start_delay=0,
                     looping=False,
                     blocking=True,

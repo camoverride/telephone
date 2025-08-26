@@ -181,6 +181,9 @@ def text_to_speech(
         output_audio_path = pytts_asr(
             text=text,
             output_audio_path=output_audio_path)
+    
+    if model =="jeff":
+        return text # This is atually the output filepath
 
     # Return is not strictly necessary, because it copies one of the args.
     return output_audio_path
