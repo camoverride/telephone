@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 import io
 import json
+import logging
 import numpy as np
 from vosk import Model, KaldiRecognizer
 import wave
@@ -15,13 +16,24 @@ app = Flask(__name__)
 api = Api(app)
 
 
+# Set up logging configuration.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Print logs to the console.
+        logging.StreamHandler(),
+        # Write logs to a file.
+        logging.FileHandler("logs/asr_server.log")])
+logger = logging.getLogger(__name__)
+
 # Import the Vosk speech recognition model (small English model for now).
 model = Model("models/vosk-model-small-en-us-0.15")
 
 
 def vosk_asr(
-    audio: np.ndarray,
-    sample_rate: int = 16000) -> str:
+    audio : np.ndarray,
+    sample_rate : int = 16000) -> str:
     """
     Perform Automatic Speech Recognition (ASR) 
     using Vosk on in-memory audio data.
@@ -65,9 +77,9 @@ def vosk_asr(
 
 
 def speech_to_text(
-    audio: np.ndarray,
-    model: str,
-    sample_rate: int = 16000) -> str:
+    audio_np : np.ndarray,
+    model : str,
+    sample_rate : int = 16000) -> str:
     """
     Converts audio data to text using a specified ASR model.
 
@@ -91,7 +103,7 @@ def speech_to_text(
         If the provided model is unsupported.
     """
     if model == "vosk":
-        return vosk_asr(audio=audio, sample_rate=sample_rate)
+        return vosk_asr(audio=audio_np, sample_rate=sample_rate)
 
     raise ValueError(f"Unsupported model: {model}")
 
@@ -128,15 +140,19 @@ class SpeechToTextAPI(Resource):
         try:
             # Parse incoming JSON request.
             data = request.get_json()
-            audio_b64 = data["audio"] # Base64-encoded audio data.
-            model_name = data["model"].strip().lower() # Normalize model name.
+
+            # Base64-encoded audio data.
+            audio_b64 = data["audio"]
+
+            # Normalize model name.
+            model_name = data["model"].strip().lower()
 
             # Decode the base64-encoded audio into raw bytes.
             audio_bytes = base64.b64decode(audio_b64)
 
             # Extract PCM audio data from the WAV file.
             with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
-                sample_rate = wav.getframerate() # Sampling rate of the audio.
+                sample_rate = wav.getframerate()
 
                 if wav.getnchannels() != 1:
                     raise ValueError("Audio must be mono-channel.")
@@ -154,7 +170,7 @@ class SpeechToTextAPI(Resource):
 
             # Transcribe the audio to text.
             transcription = speech_to_text(
-                audio=audio_np,
+                audio_np=audio_np,
                 model=model_name,
                 sample_rate=sample_rate)
 
@@ -188,37 +204,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8011,
         debug=True)
-
-
-    """
-    # Example API call.
-
-    import requests
-
-    def send_asr_request(
-        wav_file_path : str,
-        api_url : str = "http://localhost:8011/asr"):
-
-        # Read and base64-encode the audio.
-        with open(wav_file_path, "rb") as f:
-            audio_bytes = f.read()
-            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-
-        # Construct payload.
-        payload = {
-            "audio": audio_b64,
-            "model": "vosk"}
-
-        # Send POST request.
-        response = requests.post(
-            api_url,
-            json=payload)
-
-        # Show response.
-        print("Status Code:", response.status_code)
-        print("Response:", response.json())
-
-
-    # Example usage. Make sure this is a mono 16-bit PCM WAV.
-    send_asr_request("example.wav")
-    """

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from gtts import gTTS
+import logging
 import os
 import platform
 import pyttsx3
@@ -14,6 +15,18 @@ from utils import HealthCheckAPI
 # Initialize Flask application and RESTful API.
 app = Flask(__name__)
 api = Api(app)
+
+
+# Set up logging configuration.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Print logs to the console.
+        logging.StreamHandler(),
+        # Write logs to a file.
+        logging.FileHandler("logs/tts_server.log")])
+logger = logging.getLogger(__name__)
 
 
 def clean_text_for_tts(text : str) -> str:
@@ -40,7 +53,7 @@ def google_tts(
     output_audio_path : str,
     language : str):
     """
-    Use simple Google to perform TTS.
+    Use Google to perform TTS.
 
     Parameters
     ----------
@@ -49,7 +62,7 @@ def google_tts(
     output_audio_path : str
         Where the .wav file should be saved.
     language : str
-        Language. "en", "zh-cn", etc.
+        Language. "en", "zh-CN", etc.
 
     Returns
     -------
@@ -68,7 +81,7 @@ def command_line_say(
     output_audio_path : str) -> str:
     """
     Use simple command line tools to perform TTS.
-    Automatically detects whether we are on Pi or MacOS.
+    Automatically detects whether we are on Linux or MacOS.
 
     Parameters
     ----------
@@ -82,24 +95,24 @@ def command_line_say(
     str
         The `output_audio_path`
     """
-    # MacOS
+    # MacOS.
     if platform.system() == "Darwin":
         filename_aiff = "temp.aiff"
 
-        # Use macOS TTS to generate AIFF
+        # Use macOS TTS to generate AIFF.
         subprocess.run(["say", "-o", filename_aiff, text])
 
-        # Convert to WAV using ffmpeg
+        # Convert to WAV using ffmpeg.
         subprocess.run(["ffmpeg", "-y", "-i", filename_aiff, output_audio_path],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # Cleanup
+        # Cleanup.
         os.remove(filename_aiff)    
 
-    # Linux / Pi
+    # Linux / Pi.
     elif platform.system() == "Linux":
-        # Use pyttsx3 to save speech to file
-        # NOTE: should use "espeak" instead
+        # Use pyttsx3 to save speech to file.
+        # NOTE: can use "espeak" instead.
         engine = pyttsx3.init()
         engine.save_to_file(text, output_audio_path)
         engine.runAndWait()
@@ -111,7 +124,7 @@ def pytts_asr(
     text : str,
     output_audio_path : str) -> str:
     """
-    Use the pyttsx3 model to perform speech synthesis.
+    Use the pyttsx3 platform to perform speech synthesis.
 
     Parameters
     ----------
@@ -119,7 +132,7 @@ def pytts_asr(
         The words that will be spoken.
     output_audio_path : str
         Where the .wav file should be saved.
-    
+
     Returns
     -------
     str
@@ -128,7 +141,30 @@ def pytts_asr(
     engine = pyttsx3.init()
     engine.save_to_file(text, output_audio_path)
     engine.runAndWait()
+
     return output_audio_path
+
+
+def jeff_model(text : str) -> str:
+    """
+    The custom jeff model which involves pre-recorded speech.
+
+    The argument `text` should in fact be the path to an
+    already-recorded audio file, so it is simply returned.
+
+    NOTE: This is a hack to force API consistency.
+
+    Parameters
+    ----------
+    text : str
+        The path to a pre-recorded response.
+
+    Returns
+    -------
+    str
+        A copy of the `text` parameter.
+    """
+    return text
 
 
 def text_to_speech(
@@ -137,7 +173,7 @@ def text_to_speech(
     model : str,
     language : str) -> Optional[str]:
     """
-    Converts some text to a .wav audio file.
+    Converts some text to a .wav audio file by performing TTS.
 
     Parameters
     ----------
@@ -152,7 +188,7 @@ def text_to_speech(
             - "google_tts"
                 Google TTS. NOTE: requires an internet connection.
             - "pytts"    
-                Pytts library. NOTE: only on Raspbian.
+                Pytts library. NOTE: only on Linux.
     language : str
         Language for tts synthesis. E.g. "en", "zh-CN", etc.
 
@@ -181,11 +217,9 @@ def text_to_speech(
                 text=text,
                 output_audio_path=output_audio_path)
 
-    # No TTS processing needs to be done, because `text` is actually
-    # the path to a file to be played!
-    elif model =="jeff":
-        return text
-    
+    elif model == "jeff":
+        return jeff_model(text=text)
+
     else:
         raise ValueError(f"Unsupported TTS model: {model}")
 
@@ -244,15 +278,18 @@ class TextToSpeechAPI(Resource):
                 language=language)
 
             # Return success response with audio file path.
-            return jsonify({"status": "success", "audio_path": filepath})
+            return jsonify({"status": "success",
+                            "audio_path": filepath})
 
         # Return error response with exception message.
         except KeyError as ke:
-            return jsonify({"status": "error", "message": f"Missing field: {ke}"}), 400
+            return jsonify({"status": "error", 
+                            "message": f"Missing field: {ke}"}), 400
 
         # Catch remaining exceptions.
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error",
+                            "message": str(e)}), 500
 
 
 # Add the resources to the Flask app.
@@ -266,14 +303,5 @@ if __name__ == "__main__":
     # Run the TTS server.
     app.run(
         host="0.0.0.0",
-        port=8010,
+        port=8013,
         debug=True)
-
-    """
-    Example curl request:
-
-    curl -X POST http://localhost:8010/tts \
-    -H "Content-Type: application/json" \
-    -d '{"text": "你好，世界", "model": "google_tts", 
-    "output_audio_path": "_example_tts.wav", "language": "zh-CN"}'
-    """

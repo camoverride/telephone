@@ -24,7 +24,7 @@ logging.basicConfig(
         # Print logs to the console.
         logging.StreamHandler(),
         # Write logs to a file.
-        logging.FileHandler("server.log")])
+        logging.FileHandler("logs/vad_server.log")])
 logger = logging.getLogger(__name__)
 
 # Load the silero model.
@@ -61,25 +61,23 @@ def record_audio_with_silero_vad(
     None
         if no speech detected or recording too short
     """
-    # model_ready_event.wait()
-    # model = silero_model
-
     buffer_duration = 1.0
     sample_rate = 16000
     chunk_size = 1024
 
     # Audio recording object.
     pa = pyaudio.PyAudio()
-    stream = pa.open(format=pyaudio.paInt16,
-                     channels=1,
-                     rate=sample_rate,
-                     input=True,
-                     frames_per_buffer=chunk_size)
+    stream = pa.open(
+        format=pyaudio.paInt16,
+        channels=1,
+        rate=sample_rate,
+        input=True,
+        frames_per_buffer=chunk_size)
 
-    # Raw int16 numpy arrays waiting for VAD check
+    # Raw int16 numpy arrays waiting for VAD check.
     audio_buffer = []
 
-    # Frames after speech started
+    # Frames after speech started.
     recorded_frames = []
 
     recording_started = False
@@ -88,9 +86,6 @@ def record_audio_with_silero_vad(
 
     try:
         while True:
-            # if not phone_picked_up():
-            #     raise PhonePutDownError()
-    
             # Read from the audio stream, appending to the buffer too.
             data = stream.read(chunk_size, exception_on_overflow=False)
             audio_np = np.frombuffer(data, dtype=np.int16)
@@ -243,5 +238,5 @@ if __name__ == "__main__":
     # Run the VAD server.
     app.run(
         host="0.0.0.0",
-        port=8012,
+        port=8010,
         debug=True)

@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
-import asyncio
 from googletrans import Translator
 import logging
 import numpy as np
@@ -27,7 +26,7 @@ logging.basicConfig(
         # Print logs to the console.
         logging.StreamHandler(),
         # Write logs to a file.
-        logging.FileHandler("server.log")])
+        logging.FileHandler("logs/response_server.log")])
 logger = logging.getLogger(__name__)
 
 
@@ -113,9 +112,9 @@ def prompt_similarity(
     return best_path
 
 
-async def translate(
-    text : str,
-    language : str) -> str:
+def translate(
+    text: str, 
+    language: str) -> str:
     """
     Translates text from English into a target language.
 
@@ -124,7 +123,7 @@ async def translate(
     text : str
         Some input text.
     language : str
-        The desired output language: "fr", "zh-cn", etc.
+        The desired output language: "fr", "zh-CN", etc.
 
     Returns
     -------
@@ -132,9 +131,9 @@ async def translate(
         The text, translated.
     """
     translator = Translator()
-    result = await translator.translate(text, dest=language)
+    result = translator.translate(text, dest=language)
 
-    return result.text
+    return result.text  # type: ignore
 
 
 def deepseek_model(
@@ -285,9 +284,8 @@ def get_response(
 
     if model == "translate":
         try:
-            response = asyncio.run(
-                translate(text=text,
-                language=config["text_to_speech_language"]))
+            response = translate(text=text,
+                language=config["text_to_speech_language"])
             return response
         except requests.exceptions.RequestException as e:
             logger.error(f"Request to google translate API failed: {e}")
@@ -301,6 +299,7 @@ def get_response(
     if model == "tiny_llama":
         try:
             response = tiny_llama_model(text=text)
+            return response
         except requests.exceptions.RequestException as e:
             logger.error(f"Request to tiny-llama API failed: {e}")
 
@@ -309,6 +308,7 @@ def get_response(
             response = deepseek_model(
                         text=text,
                         system_prompt=config["system_prompt"])
+            return response
         except requests.exceptions.RequestException as e:
             logger.error(f"Request to deepseek API failed: {e}")
 
@@ -404,5 +404,5 @@ if __name__ == "__main__":
     # Run the Response server.
     app.run(
         host="0.0.0.0",
-        port=8013,
+        port=8012,
         debug=True)
