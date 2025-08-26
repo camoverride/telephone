@@ -2,7 +2,7 @@
 Test the GPIO button in real time.
 NOTE: this will not work on MacOS when testing.
 """
-from gpiozero import Button
+from gpiozero import Button  # type: ignore
 from signal import pause
 
 
