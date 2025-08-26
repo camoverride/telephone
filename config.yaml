@@ -1,6 +1,6 @@
 # Interaction sounds.
 starting_audio_prompt: prompts/1_start_prompt/cameron_says_hello.wav
-prompt_start_delay: 1
+prompt_start_delay: 0.5
 prompt_closing_sound: prompts/2_start_reply/beep_soft.wav
 recording_background_sound: prompts/3_waiting_for_user_input/musical_soft_background_softer.wav
 thinking_sound: "prompts/4_thinking/chime_waiting_faster.wav"
@@ -15,9 +15,18 @@ silence_timeout: 3
 speech_to_text_model: vosk
 
 # Response model options: 
-# `echo`, `random_markov`, `tiny_llama`, `deepseek`.
-response_model: deepseek
+# `echo`, `random_markov`, `tiny_llama`, `deepseek`, `jeff`.
+response_model: translate
+text_to_speech_language: zh-CN
 fallback_response_model: tiny_llama
+
+# TTS model options: `command_line`, `google_tts`, `pytts`
+# NOTE: `google_tts` requires internet connection!
+text_to_speech_model: google_tts
+
+
+
+
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
 system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
@@ -27,8 +36,3 @@ tiny_llama_api_url: "http://100.116.247.74:5000/generate"
 
 # API endpoint for the printer server
 printer_server_url: http://100.114.191.58:5000/print
-
-# TTS model options: `command_line`, `google_tts`, `pytts`
-# NOTE: `google_tts` requires internet connection!
-text_to_speech_model: google_tts
-language: "en"

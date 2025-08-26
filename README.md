@@ -143,3 +143,26 @@ Follow these steps in order:
 ## Licence
 
 License: Non-Commercial MIT-style license. See `LICENSE` for details.
+
+
+
+
+TODO: 
+- no timeout for silero VAD!
+- only audio is cancelable -- make it all!
+- test for other error types, or times when function moves on but with bad inputs to next step!
+- MUST be `config.yaml`
+
+
+make these all external servers:
+  from _silero_vad import record_audio_with_silero_vad
+  from _speech_to_text import speech_to_text
+  from _response import get_response
+  from _text_to_speech import text_to_speech
+then communicate with them via processes that can be tracked and killed
+these processes (HTTP requests) are cheap to spawn and can be easily killed
+otherwise reloading all the processes is too heavy!
+
+
+
+# TODO: experiment with larger vosk models!

@@ -1,5 +1,8 @@
+import base64
+from flask import jsonify, Response
+from flask_restful import Resource
+import io
 import logging
-import multiprocessing
 import numpy as np
 import platform
 import requests
@@ -9,6 +12,8 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Optional
+import wave
 
 
 
@@ -19,7 +24,7 @@ logging.basicConfig(
 
 
 # Read all the banned words into a list.
-BANNED_WORDS = None
+BANNED_WORDS: Optional[list[str]] = None
 try:
     with open("banned_words.txt", "r") as f:
         BANNED_WORDS = [line.rstrip('\n') for line in f]
@@ -28,13 +33,21 @@ except FileNotFoundError:
 
 
 # System-dependent import. Get The GPIO pins on Raspbian.
-# TODO: must specifically recognize Raspbian (debian)
-# TODO: not all Pi's will be using the button
+# Check for Raspbian specifically, and not just any Linux system.
 if platform.system() == "Linux":
+    try:
+        with open("/etc/os-release") as f:
+            os_info = f.read().lower()
+            if "raspbian" in os_info:
+                from gpiozero import Button  # type: ignore
+                # GPIO 17 with 50ms debounce time.
+                button = Button(17, bounce_time=0.05)
+            else:
+                logging.warning("Not running on Raspbian, skipping GPIO setup.")
+    except FileNotFoundError:
+        logging.warning("Could not read /etc/os-release to check \
+                         for Raspbian. Skipping GPIO setup.")
     from gpiozero import Button # type: ignore
-
-    # GPIO 17 with 50ms debounce time.
-    button = Button(17, bounce_time=0.05)
 
 
 # Load the model once at module level for efficiency
@@ -49,7 +62,7 @@ class PhonePutDownError(Exception):
         super().__init__(message)
 
 
-def phone_picked_up() -> bool: # type:ignore  Type not recognized.
+def phone_picked_up() -> bool:
     """
     Returns True if the phone is picked up, otherwise False.
 
@@ -89,6 +102,10 @@ def phone_picked_up() -> bool: # type:ignore  Type not recognized.
             # raise PhonePutDownError
             return False
 
+    # If it's some other system, return True.
+    else:
+        return True
+
 
 def ignored_phrases(text : str) -> bool:
     """
@@ -105,6 +122,10 @@ def ignored_phrases(text : str) -> bool:
         True if the input is a simple greeting, a filler word, or
         contains profanity. Otherwise False.
     """
+    # If there are no banned words, just return False.
+    if not BANNED_WORDS:
+        return False
+
     # Check whether the entire input is bad, like a greeting.
     if text.lower() in ("huh", "hi", "hello", "sup",
                         "what's up", "greetings", "hi there",
@@ -203,9 +224,9 @@ class play_audio:
         self.killable = killable
 
         # Active audio subprocess.
-        self.process: subprocess.Popen | None = None
+        self.process: Optional[subprocess.Popen] = None
         # (Unused currently).
-        self._kill_thread: threading.Thread | None = None
+        self._kill_thread: Optional[threading.Thread] = None
         # Used to manually break out of afplay loops (macOS).
         self._looping = True
 
@@ -325,88 +346,6 @@ class play_audio:
         return (self.process is not None) and (self.process.poll() is None)
 
 
-class KillableFunction:
-    def __init__(
-        self,
-        func,
-        *,
-        args=(),
-        kwargs=None,
-        kill_check=lambda: False,
-        check_interval=0.1,
-        use_thread=False):
-
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs if kwargs is not None else {}
-        self.kill_check = kill_check
-        self.check_interval = check_interval
-        self.use_thread = use_thread
-        self._result = None
-        self._exception = None
-
-        if not self.use_thread:
-            self._result_queue = multiprocessing.Queue()
-
-    def _target_process(self, result_queue):
-        try:
-            result = self.func(*self.args, **self.kwargs)
-            result_queue.put(('result', result))
-        except Exception as e:
-            result_queue.put(('error', e))
-
-    def _target_thread(self):
-        try:
-            self._result = self.func(*self.args, **self.kwargs)
-        except Exception as e:
-            self._exception = e
-
-    def run(self):
-        if self.use_thread:
-            thread = threading.Thread(target=self._target_thread)
-            thread.start()
-
-            while thread.is_alive():
-                if self.kill_check():
-                    logging.warning("Kill condition triggered. Cannot forcibly kill threads cleanly.")
-                    # Threads cannot be forcefully killed in Python, so just return None
-                    return None
-                time.sleep(self.check_interval)
-
-            thread.join()
-            if self._exception:
-                raise self._exception
-            return self._result
-        else:
-            process = multiprocessing.Process(target=self._target_process, args=(self._result_queue,))
-            process.start()
-
-            try:
-                while process.is_alive():
-                    if self.kill_check():
-                        logging.warning("Kill condition triggered. Terminating process.")
-                        process.terminate()
-                        process.join()
-                        return None
-                    time.sleep(self.check_interval)
-
-                process.join()
-                if not self._result_queue.empty():
-                    status, value = self._result_queue.get()
-                    if status == 'result':
-                        return value
-                    elif status == 'error':
-                        raise value
-                else:
-                    return None
-
-            except KeyboardInterrupt:
-                logging.warning("KeyboardInterrupt — terminating process.")
-                process.terminate()
-                process.join()
-                return None
-
-
 def create_embedding(text: str) -> np.ndarray:
     """
     Create a sentence embedding from text using SentenceTransformer.
@@ -423,4 +362,44 @@ def create_embedding(text: str) -> np.ndarray:
     """
     embedding = _embedding_model.encode(text)
 
-    return embedding  # type: ignore
+    return np.ndarray(embedding)  # type: ignore
+
+
+def encode_audio_to_base64(audio: np.ndarray, sample_rate: int = 16000) -> str:
+    """
+    Encodes the recorded audio as WAV file and converts it to base64 string.
+
+    Parameters:
+    ----------
+    audio : np.ndarray
+        The recorded audio data (int16).
+    sample_rate : int
+        The sampling rate (default 16000 Hz).
+
+    Returns:
+    -------
+    str
+        Base64-encoded audio string.
+    """
+    # Convert numpy array to WAV format.
+    with io.BytesIO() as audio_io:
+        with wave.open(audio_io, 'wb') as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)  # 16-bit PCM
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio.tobytes())
+
+        audio_b64 = base64.b64encode(audio_io.getvalue()).decode('utf-8')
+
+        return audio_b64
+
+
+class HealthCheckAPI(Resource):
+    """
+    Simple health check API to monitor the server status.
+    """
+
+    def get(self) -> Response:
+        # For example, we can return the system uptime and status.
+        uptime = subprocess.check_output(["uptime", "-p"]).decode('utf-8')
+        return jsonify({"status": "ok", "uptime": uptime.strip()})

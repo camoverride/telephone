@@ -1,34 +1,55 @@
+from flask import Flask, request, jsonify
+from flask_restful import Api, Resource
+import asyncio
+from googletrans import Translator
 import logging
-import multiprocessing
 import numpy as np
 from openai import OpenAI
 import requests
 import sqlite3
-import time
+from typing import Optional
 import yaml
-import asyncio
-from googletrans import Translator
+from utils import create_embedding, HealthCheckAPI
 from models.markov._train_markov_model import load_model, generate_text
-from utils import phone_picked_up, create_embedding
 
 
 
-# Set up logging configuration
+# Initialize Flask application and RESTful API.
+app = Flask(__name__)
+api = Api(app)
+
+
+# Set up logging configuration.
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Print logs to the console.
+        logging.StreamHandler(),
+        # Write logs to a file.
+        logging.FileHandler("server.log")])
+logger = logging.getLogger(__name__)
 
 
-# Load config file
-# This will pull API endpoints and the system prompt.
+# Load config file.
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
+# Load Markov model.
+MARKOV_MODEL = load_model("models/markov/_random_poems_model.pkl")
+
+# Deepseek API key. Git ignored.
+DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
+
+# Question answer database for "jeff" model.
+QA_DATABASE_PATH = "data/qa_pairs.db"
+
+
+
 def prompt_similarity(
     text: str,
-    dataset_path: str
-) -> str:
+    dataset_path: str) -> str:
     """
     Compares the input text to prompts in a dataset.
     Identifies the most similar prompt/reply pair and
@@ -53,14 +74,14 @@ def prompt_similarity(
     str
         Path to an existing pre-computed reply.
     """
-    # Step 1: Create embedding for input text
+    # Create embedding for input text.
     input_embedding = create_embedding(text)
 
-    # Step 2: Connect to database
+    # Connect to database.
     conn = sqlite3.connect(dataset_path)
     cursor = conn.cursor()
 
-    # Step 3: Load all question embeddings and corresponding paths
+    # Load all question embeddings and corresponding paths.
     cursor.execute("SELECT question_embedding, path_to_answer_wav FROM qa_pairs")
     rows = cursor.fetchall()
 
@@ -71,15 +92,15 @@ def prompt_similarity(
         blob = row[0]
         path = row[1]
 
-        # Step 4: Deserialize DB-stored embedding
+        # Deserialize database-stored embedding.
         stored_embedding = np.frombuffer(blob, dtype=np.float32)
 
-        # Step 5: Cosine similarity
+        # Calculate cosine similarity
         dot_product = np.dot(input_embedding, stored_embedding)
         norm_product = np.linalg.norm(input_embedding) * np.linalg.norm(stored_embedding)
         similarity = dot_product / norm_product if norm_product != 0 else -1
 
-        # Step 6: Track best match
+        # Track best match.
         if similarity > best_similarity:
             best_similarity = similarity
             best_path = path
@@ -112,13 +133,13 @@ async def translate(
     """
     translator = Translator()
     result = await translator.translate(text, dest=language)
-    
+
     return result.text
 
 
 def deepseek_model(
     text: str,
-    system_prompt : str) -> str | None:
+    system_prompt : str) -> Optional[str]:
     """
     Use the deepseek LLM to produce a response related to the text.
 
@@ -129,14 +150,14 @@ def deepseek_model(
     ----------
     text : str
         Something said by a user.
-    
+
     Returns
     -------
     str
         The response from the deepseek model.
     """
     # Locally saved API key.
-    with open("deepseek_api_key.txt", "r") as f:
+    with open(DEEPSEEK_API_KEY_PATH, "r") as f:
         deepseek_api_key = f.read().strip()
 
     # Access the client.
@@ -154,8 +175,7 @@ def deepseek_model(
              "content": text},
         ],
         stream=False,
-        temperature=1.5
-    )
+        temperature=1.5)
 
     return response.choices[0].message.content
 
@@ -164,14 +184,14 @@ def tiny_llama_model(text: str) -> str:
     """
     Use the tiny-llama LLM to produce a response related to
     the `text`.
-    
+
     NOTE: see `config.yaml` for the system prompt and API endpoint.
 
     Parameters
     ----------
     text : str
         Something said by a user.
-    
+
     Returns
     -------
     str
@@ -188,7 +208,6 @@ def tiny_llama_model(text: str) -> str:
 
     # Check the server's response.
     if response.ok:
-
         return response.json()["reply"]
 
     else:
@@ -202,8 +221,7 @@ def tiny_llama_model(text: str) -> str:
 
 def random_markov_model(
     length : int,
-    start_word : str,
-    model_path : str) -> str:
+    start_word : str) -> str:
     """
     Uses a random markov model trained off some poetry.
 
@@ -216,150 +234,175 @@ def random_markov_model(
     start_word : str
         The first word in the response.
         NOTE: this word must belong to the vocabulary.
-    model_path : str
-        Path to the trained model.
-    
+
     Returns
     -------
     str
         Words in a string.
     """
-    # Load model
-    loaded_model = load_model(model_path)
-
     # Generate and print text
     text = generate_text(
-        loaded_model,
+        MARKOV_MODEL,
         start_word=start_word,
         length=length)
 
     return text
 
 
-# def get_response(
-#     text : str,
-#     model : str,
-#     language : str) -> str | None:
-#     """
-#     Produces a text reply to a text input.
+def get_response(
+    text : str,
+    model : str) -> Optional[str]:
+    """
+    Produces a text reply to a text input.
 
-#     Parameters
-#     ----------
-#     text : str
-#         The input text that the response is conditioned on.
-#     model : str
-#         Which model to use. Current models:
-#             - "echo"
-#                 Repeats back the input text.
-#             - "random_markov"
-#                 Random text from a trained markov model.
-#             - "tiny_llama"
-#                 A small LLM
-#             - "jeff"
-#                 Pre-recorded Bezos sounds.
-#     language : str | None
-#         Which language to translate to, if any.
+    Parameters
+    ----------
+    text : str
+        The input text that the response is conditioned on.
+    model : str
+        Which model to use. Current models:
+            - "echo"
+                Repeats back the input text.
+            - "translate"
+                Translates the text from English into a target language.
+            - "random_markov"
+                Random text from a trained markov model.
+            - "tiny_llama"
+                A small LLM hosted on a custom server.
+            - "deepseek"
+                A call to the deepseek API.
+            - "jeff"
+                Pre-recorded Bezos sounds.
 
-#     Returns
-#     ------
-#     str
-#         The reply generated by the model.
-#     """
-#     if model == "echo":
-#         response = text
+    Returns
+    ------
+    str
+        The reply generated by the model.
+    """
+    if model == "echo":
+        response = text
+        return response
 
-#     elif model == "translate":
-#         response = asyncio.run(translate(text=text, language=language))
+    if model == "translate":
+        try:
+            response = asyncio.run(
+                translate(text=text,
+                language=config["text_to_speech_language"]))
+            return response
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request to google translate API failed: {e}")
 
+    if model == "random_markov":
+        response = random_markov_model(
+            length=30,
+            start_word="the")
+        return response
 
-#     if model == "random_markov":
-#         response = random_markov_model(
-#             length=30,
-#             start_word="the",
-#             model_path="models/markov/_random_poems_model.pkl")
-
-#     if model == "tiny_llama":
-#         response = tiny_llama_model(text=text)
-
-#     if model == "deepseek":
-#         response = deepseek_model(
-#             text=text,
-#             system_prompt=config["system_prompt"])
-        
-#     if model == "jeff":
-#         response = prompt_similarity(
-#             text=text,
-#             dataset_path="data/qa_pairs.db")
-
-#     return str(response)
-
-
-def _get_response_worker(
-    text: str,
-    model: str,
-    result_queue: multiprocessing.Queue,
-    language : str):
-    try:
-        if model == "echo":
-            response = text
-
-        elif model == "translate":
-            response = asyncio.run(translate(text=text, language=language))
-
-        elif model == "random_markov":
-            response = random_markov_model(
-                length=30,
-                start_word="the",
-                model_path="models/markov/_random_poems_model.pkl")
-
-        elif model == "tiny_llama":
+    if model == "tiny_llama":
+        try:
             response = tiny_llama_model(text=text)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request to tiny-llama API failed: {e}")
 
-        elif model == "deepseek":
+    if model == "deepseek":
+        try:
             response = deepseek_model(
-                text=text,
-                system_prompt=config["system_prompt"])
+                        text=text,
+                        system_prompt=config["system_prompt"])
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request to deepseek API failed: {e}")
 
-        if model == "jeff":
-            response = prompt_similarity(
-                text=text,
-                dataset_path="data/qa_pairs.db")
+    if model == "jeff":
+        response = prompt_similarity(
+            text=text,
+            dataset_path=QA_DATABASE_PATH)
+        return response
 
-        else:
-            response = f"[Unknown model: {model}]"
-
-        result_queue.put(response)
-
-    except Exception as e:
-        print(e)
-        result_queue.put(None)
+    return None
 
 
-def killable_get_response(
-    text: str, 
-    model: str,
-    language) -> str | None:
+class TextResponseAPI(Resource):
+    """
+    API Resource to handle text-based responses from multiple models.
+    """
 
-    result_queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_get_response_worker,
-        args=(text, model, result_queue, language))
-    proc.start()
+    def post(self):
+        """
+        Handle POST request to generate a response from a specified model.
 
-    try:
-        while proc.is_alive():
-            if not phone_picked_up():
-                proc.terminate()
-                proc.join()
-                return None
-            time.sleep(0.1)
+        Expected JSON body:
+        {
+            "text": "string",  # The text input to the model
+            "model": "string"  # The model to use (e.g., "translate", "tiny_llama", "deepseek")
+        }
 
-        if not result_queue.empty():
-            return result_queue.get()
+        Returns:
+        -------
+        JSON:
+            - status: "success" or "error"
+            - response: The model-generated response
+            - message: Error message (if any failure occurs)
+        """
+        try:
+            # Parse incoming JSON request
+            data = request.get_json()
 
-        return None
+            # Get parameters
+            text = data.get("text")
+            model = data.get("model")
 
-    except KeyboardInterrupt:
-        proc.terminate()
-        proc.join()
-        return None
+            # Validate required fields
+            if not text:
+                return jsonify({
+                    "status": "error",
+                    "message": "'text' parameter is required."
+                }), 400
+
+            if not model:
+                return jsonify({
+                    "status": "error",
+                    "message": "'model' parameter is required."
+                }), 400
+
+            # Generate the response from the specified model
+            response = get_response(text, model)
+
+            if response is None:
+                return jsonify({
+                    "status": "error",
+                    "message": "Invalid model or error generating response."
+                }), 400
+
+            return jsonify({
+                "status": "success",
+                "response": response
+            })
+
+        except ValueError as ve:
+            logger.error(f"ValueError: {ve}")
+            return jsonify({
+                "status": "error",
+                "message": str(ve)
+            }), 400
+
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return jsonify({
+                "status": "error",
+                "message": "An unexpected error occurred."
+            }), 500
+
+
+# Add the resources to the Flask app.
+api.add_resource(TextResponseAPI, "/response")
+api.add_resource(HealthCheckAPI, "/health")
+
+
+
+if __name__ == "__main__":
+
+    # Run the Response server.
+    app.run(
+        host="0.0.0.0",
+        port=8013,
+        debug=True)

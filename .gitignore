@@ -2,9 +2,7 @@ __pycache__
 .venv
 
 # Temp audio files
-_input_tmp.wav
-_output_tmp.wav
-_tmp.wav
+*.wav
 
 # Temp model files
 **.zip

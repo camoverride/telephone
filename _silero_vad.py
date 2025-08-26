@@ -1,58 +1,40 @@
+from flask import Flask, request, jsonify
+from flask_restful import Api, Resource
 import logging
 import numpy as np
 import pyaudio
-import threading
+from silero_vad import load_silero_vad, get_speech_timestamps
 import time
 import torch
-import wave
-from silero_vad import load_silero_vad, get_speech_timestamps
-from utils import phone_picked_up, KillableFunction, PhonePutDownError
+from typing import Optional
+from utils import encode_audio_to_base64, HealthCheckAPI
 
 
 
-# Set up logging configuration
+# Initialize Flask application and RESTful API.
+app = Flask(__name__)
+api = Api(app)
+
+
+# Set up logging configuration.
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Print logs to the console.
+        logging.StreamHandler(),
+        # Write logs to a file.
+        logging.FileHandler("server.log")])
+logger = logging.getLogger(__name__)
 
-
-# Global model storage.
-silero_model = None
-model_ready_event = threading.Event()
-
-# Load model in a thread at startup.
-def load_model_once():
-    global silero_model
-    silero_model = load_silero_vad()
-    silero_model.eval()  # type: ignore
-    model_ready_event.set()
-
-# Start model loading on import.
-threading.Thread(target=load_model_once, daemon=True).start()
-
-
-# Killable wrapper function
-def killable_record_audio_silero(*args, **kwargs):
-    def should_kill():
-        if phone_picked_up() == False:
-            raise PhonePutDownError
-        return not phone_picked_up()
-
-    killable = KillableFunction(
-        func=record_audio_with_silero_vad,
-        args=args,
-        kwargs=kwargs,
-        kill_check=should_kill,
-        use_thread=True  # Make sure this uses a thread, not a process.
-    )
-    return killable.run()
+# Load the silero model.
+silero_model = load_silero_vad()
 
 
 def record_audio_with_silero_vad(
-    save_filepath: str,
     silence_duration_to_stop: float = 3.0,
     min_recording_duration: float = 5.0,
-    max_recording_duration: float = 30.0) -> str | None:
+    max_recording_duration: float = 30.0) -> Optional[np.ndarray]:
     """
     Records audio from the mic using Silero VAD. Starts when speech is
     detected, stops after `silence_duration_to_stop` seconds of silence,
@@ -79,8 +61,8 @@ def record_audio_with_silero_vad(
     None
         if no speech detected or recording too short
     """
-    model_ready_event.wait()
-    model = silero_model
+    # model_ready_event.wait()
+    # model = silero_model
 
     buffer_duration = 1.0
     sample_rate = 16000
@@ -106,8 +88,8 @@ def record_audio_with_silero_vad(
 
     try:
         while True:
-            if not phone_picked_up():
-                raise PhonePutDownError()
+            # if not phone_picked_up():
+            #     raise PhonePutDownError()
     
             # Read from the audio stream, appending to the buffer too.
             data = stream.read(chunk_size, exception_on_overflow=False)
@@ -123,10 +105,11 @@ def record_audio_with_silero_vad(
             audio_for_vad = np.concatenate(audio_buffer)
             audio_tensor = torch.from_numpy(audio_for_vad).float() / 32768.0
 
-            speech_timestamps = get_speech_timestamps(audio_tensor,
-                                                      model,
-                                                      sampling_rate=sample_rate,
-                                                      return_seconds=True)
+            speech_timestamps = get_speech_timestamps(
+                audio_tensor,
+                silero_model,
+                sampling_rate=sample_rate,
+                return_seconds=True)
 
             # Assuming a buffer of 1 sec, if greater than 0.3 is speech, it's real
             speech_duration = sum(ts['end'] - ts['start'] for ts in speech_timestamps)
@@ -142,17 +125,20 @@ def record_audio_with_silero_vad(
 
             else:
                 if recording_started:
-                    silence_elapsed = time.time() - last_speech_time
-                    recording_elapsed = time.time() - recording_start_time
+                    silence_elapsed = time.time() - last_speech_time  # type: ignore
+                    recording_elapsed = time.time() - recording_start_time # type: ignore
 
                     # Check max recording duration (added)
                     if recording_elapsed >= max_recording_duration:
-                        logging.info(f"Max recording duration {max_recording_duration}s reached, stopping.")
+                        logging.info(f"Max recording duration {max_recording_duration}s\
+                                      reached, stopping.")
                         break
 
                     # Only stop if silence passed AND minimum recording time is reached
-                    if silence_elapsed >= silence_duration_to_stop and recording_elapsed >= min_recording_duration:
-                        logging.info(f"Silence for {silence_elapsed:.2f}s after speech and minimum recording time reached, stopping.")
+                    if silence_elapsed >= silence_duration_to_stop and \
+                        recording_elapsed >= min_recording_duration:
+                        logging.info(f"Silence for {silence_elapsed:.2f}s \
+                                     after speech and minimum recording time reached, stopping.")
                         break
                     else:
                         recorded_frames.extend(audio_buffer)
@@ -175,22 +161,87 @@ def record_audio_with_silero_vad(
 
     recorded_audio = np.concatenate(recorded_frames)
 
-    with wave.open(save_filepath, 'wb') as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(sample_rate)
-        wf.writeframes(recorded_audio.tobytes())
+    return recorded_audio
 
-    logging.debug(f"Audio saved to {save_filepath}")
-    return save_filepath
+
+class AudioRecordingAPI(Resource):
+    """
+    API Resource to trigger audio recording using Silero
+    VAD and return audio as base64.
+    """
+
+    def post(self):
+        """
+        Handle POST request to start audio recording and return audio as base64.
+
+        Expected JSON body:
+        {
+            "silence_duration_to_stop": float,  # Optional, default is 3.0
+            "min_recording_duration": float,    # Optional, default is 5.0
+            "max_recording_duration": float     # Optional, default is 30.0
+        }
+
+        Returns:
+        -------
+        JSON:
+            - status: "success" or "error"
+            - audio: Base64-encoded audio data (if successful)
+            - message: Error message (if any failure occurs)
+        """
+        try:
+            # Parse incoming JSON request.
+            data = request.get_json()
+
+            # Get parameters with defaults.
+            silence_duration = data.get('silence_duration_to_stop', 3.0)
+            min_duration = data.get('min_recording_duration', 5.0)
+            max_duration = data.get('max_recording_duration', 30.0)
+
+            # Start recording using Silero VAD.
+            audio_data = record_audio_with_silero_vad(
+                silence_duration_to_stop=silence_duration,
+                min_recording_duration=min_duration,
+                max_recording_duration=max_duration)
+
+            if audio_data is None:
+                return jsonify({
+                    "status": "error",
+                    "message": "No speech detected or recording duration too short."
+                }), 400
+
+            # Convert the audio to base64.
+            audio_b64 = encode_audio_to_base64(audio_data)
+
+            return jsonify({
+                "status": "success",
+                "audio": audio_b64
+            })
+
+        except ValueError as ve:
+            logger.error(f"ValueError: {ve}")
+            return jsonify({
+                "status": "error",
+                "message": str(ve)
+            }), 400
+
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return jsonify({
+                "status": "error",
+                "message": "An unexpected error occurred."
+            }), 500
+
+
+# Add the resources to the Flask app.
+api.add_resource(AudioRecordingAPI, "/record")
+api.add_resource(HealthCheckAPI, "/health")
 
 
 
 if __name__ == "__main__":
 
-    for _ in range(3):
-        killable_record_audio_silero(
-            save_filepath="vad_silero.wav",
-            silence_duration_to_stop=3.0,
-            min_recording_duration=5.0,
-            max_recording_duration=20.0)
+    # Run the VAD server.
+    app.run(
+        host="0.0.0.0",
+        port=8012,
+        debug=True)

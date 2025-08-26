@@ -1,134 +1,224 @@
+import base64
+from flask import Flask, request, jsonify
+from flask_restful import Api, Resource
+import io
 import json
-import logging
-import multiprocessing
-import os
-import time
+import numpy as np
 from vosk import Model, KaldiRecognizer
 import wave
-from utils import phone_picked_up, PhonePutDownError
+from utils import HealthCheckAPI
 
 
 
-# Set up logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+# Initialize Flask application and RESTful API.
+app = Flask(__name__)
+api = Api(app)
+
+
+# Import the Vosk speech recognition model (small English model for now).
+model = Model("models/vosk-model-small-en-us-0.15")
 
 
 def vosk_asr(
-    audio_file_path : str,
-    model_path: str) -> str:
+    audio: np.ndarray,
+    sample_rate: int = 16000) -> str:
     """
-    Uses vosk to perform ASR.
+    Perform Automatic Speech Recognition (ASR) 
+    using Vosk on in-memory audio data.
 
     Parameters
     ----------
-    audio_file_path : str
-        The path to an audio file.
-    model_path : str
-        Path to the vosk model artifact.
+    audio : np.ndarray
+        Raw audio samples as a NumPy array, typically int16. If the
+        audio is float, it will be scaled to int16 for Vosk compatibility.
+    sample_rate : int
+        The sampling rate of the audio. Default is 16000 Hz.
 
     Returns
     -------
     str
-        The speech contained in the text.
+        Transcribed text from the audio input.
     """
-    # Check for Vosk model
-    if not os.path.exists(model_path):
-        raise Exception(f"Vosk model folder '{model_path}' not found.")
+    # Initialize the recognizer with the model and sample rate.
+    rec = KaldiRecognizer(model, sample_rate)
+    rec.SetWords(True) # Enables word-level recognition.
 
-    model = Model(model_path)
-    audio_file = wave.open(audio_file_path, "rb")
-    rec = KaldiRecognizer(model, audio_file.getframerate())
+    # If audio is not in int16 format, scale it.
+    if audio.dtype != np.int16:
+        audio = (audio * 32767).astype(np.int16)
+
+    audio_bytes = audio.tobytes()
+    chunk_size = 4000 # The size of each audio chunk to process at a time.
+
     result_text = ""
-
-    while True:
-        data = audio_file.readframes(4000)
-        if len(data) == 0:
-            break
-        if rec.AcceptWaveform(data):
+    for i in range(0, len(audio_bytes), chunk_size):
+        chunk = audio_bytes[i:i + chunk_size]
+        if rec.AcceptWaveform(chunk):
             res = json.loads(rec.Result())
-            if "text" in res:
-                result_text += res["text"] + " "
+            result_text += res.get("text", "") + " "
 
-    # Get final partial result
+    # Process any remaining audio to finalize the recognition.
     res = json.loads(rec.FinalResult())
-    if "text" in res:
-        result_text += res["text"]
+    result_text += res.get("text", "")
 
-    result_text = result_text.strip()
-
-    return result_text
+    return result_text.strip()
 
 
 def speech_to_text(
-    audio_file_path : str,
-    model : str) -> str:
+    audio: np.ndarray,
+    model: str,
+    sample_rate: int = 16000) -> str:
     """
-    Extracts the speech from a given .wav file.
+    Converts audio data to text using a specified ASR model.
 
     Parameters
     ----------
-    audio_file_path : str
-        A .wav file that may or may not contain human speech.
+    audio : np.ndarray
+        The raw audio data in a NumPy array (int16).
     model : str
-        Which model should be used.
-    
+        The ASR model to use. Supported models: "vosk".
+    sample_rate : int
+        The audio sampling rate, typically 16000 Hz.
+
     Returns
     -------
     str
-        The speech contained in the audio, if any exists.
+        The transcribed text.
+
+    Raises
+    ------
+    ValueError
+        If the provided model is unsupported.
     """
     if model == "vosk":
-        result_text = vosk_asr(
-            audio_file_path=audio_file_path,
-            model_path="models/vosk-model-small-en-us-0.15")
+        return vosk_asr(audio=audio, sample_rate=sample_rate)
 
-    return result_text
+    raise ValueError(f"Unsupported model: {model}")
 
 
-def _speech_to_text_worker(
-    audio_file_path: str,
-    model: str,
-    result_queue: multiprocessing.Queue):
-    try:
-        if model == "vosk":
-            result_text = vosk_asr(
-                audio_file_path=audio_file_path,
-                model_path="models/vosk-model-small-en-us-0.15")
+class SpeechToTextAPI(Resource):
+    """
+    RESTful API resource for Speech to Text (ASR) conversion.
 
-        result_queue.put(result_text)
+    Exposes a POST endpoint at `/asr` that accepts JSON input containing audio
+    and ASR parameters, and returns the recognized text.
 
-    except Exception as e:
-        result_queue.put(None)
+    Expected JSON input fields:
+        - audio (str): Base64-encoded audio data (WAV format, mono, 16-bit PCM).
+        - model (str): ASR model to use (currently supports "vosk").
+    """
+
+    def post(self):
+        """
+        Handle POST request to transcribe audio to text.
+
+        Expected JSON body:
+        {
+            "audio": "base64-encoded-audio",
+            "model": "vosk"
+        }
+
+        Returns:
+        -------
+        JSON:
+            - status: "success" or "error"
+            - text: Transcribed text (if successful)
+            - message: Error message (if any failure occurs)
+        """
+        try:
+            # Parse incoming JSON request.
+            data = request.get_json()
+            audio_b64 = data["audio"] # Base64-encoded audio data.
+            model_name = data["model"].strip().lower() # Normalize model name.
+
+            # Decode the base64-encoded audio into raw bytes.
+            audio_bytes = base64.b64decode(audio_b64)
+
+            # Extract PCM audio data from the WAV file.
+            with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
+                sample_rate = wav.getframerate() # Sampling rate of the audio.
+
+                if wav.getnchannels() != 1:
+                    raise ValueError("Audio must be mono-channel.")
+
+                if wav.getsampwidth() != 2:
+                    raise ValueError("Audio must be 16-bit PCM.")
+
+                # Read the raw audio frames and convert them to a NumPy array.
+                audio_data = wav.readframes(wav.getnframes())
+                audio_np = np.frombuffer(audio_data, dtype=np.int16)
+
+                # Limit the maximum audio duration (for performance reasons).
+                if len(audio_np) > sample_rate * 600:
+                    raise ValueError("Audio too long; limit to 10 minutes.")
+
+            # Transcribe the audio to text.
+            transcription = speech_to_text(
+                audio=audio_np,
+                model=model_name,
+                sample_rate=sample_rate)
+
+            return jsonify({
+                "status": "success",
+                "text": transcription})
+
+        # Handle missing fields in the request.
+        except KeyError as ke:
+            return jsonify({
+                "status": "error",
+                "message": f"Missing field: {ke}"}), 400
+
+        # General error handling.
+        except Exception as e:
+            return jsonify({
+                "status": "error",
+                "message": str(e)}), 500
 
 
-def killable_speech_to_text(
-    audio_file_path: str,
-    model: str) -> str | None:
-    result_queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_speech_to_text_worker,
-        args=(audio_file_path, model, result_queue)
-    )
-    proc.start()
+# Add the resources to the Flask app.
+api.add_resource(SpeechToTextAPI, "/asr")
+api.add_resource(HealthCheckAPI, "/health")
 
-    try:
-        while proc.is_alive():
-            if not phone_picked_up():
-                raise PhonePutDownError
-                logging.info("Phone placed down. Terminating speech-to-text process...")
-                proc.terminate()
-                proc.join()
-                return None
-            time.sleep(0.1)
 
-        # If process exited, get result (if available)
-        if not result_queue.empty():
-            return result_queue.get()
-        return None
 
-    except KeyboardInterrupt:
-        proc.terminate()
-        proc.join()
-        return None
+if __name__ == "__main__":
+
+    # Run the ASR server.
+    app.run(
+        host="0.0.0.0",
+        port=8011,
+        debug=True)
+
+
+    """
+    # Example API call.
+
+    import requests
+
+    def send_asr_request(
+        wav_file_path : str,
+        api_url : str = "http://localhost:8011/asr"):
+
+        # Read and base64-encode the audio.
+        with open(wav_file_path, "rb") as f:
+            audio_bytes = f.read()
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        # Construct payload.
+        payload = {
+            "audio": audio_b64,
+            "model": "vosk"}
+
+        # Send POST request.
+        response = requests.post(
+            api_url,
+            json=payload)
+
+        # Show response.
+        print("Status Code:", response.status_code)
+        print("Response:", response.json())
+
+
+    # Example usage. Make sure this is a mono 16-bit PCM WAV.
+    send_asr_request("example.wav")
+    """

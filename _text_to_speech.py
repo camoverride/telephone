@@ -1,19 +1,19 @@
+from flask import Flask, request, jsonify
+from flask_restful import Api, Resource
 from gtts import gTTS
-import logging
 import os
 import platform
 import pyttsx3
 import re
 import subprocess
-from utils import KillableFunction
-from utils import phone_picked_up
+from typing import Optional
+from utils import HealthCheckAPI
 
 
 
-# Set up logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+# Initialize Flask application and RESTful API.
+app = Flask(__name__)
+api = Api(app)
 
 
 def clean_text_for_tts(text : str) -> str:
@@ -23,8 +23,8 @@ def clean_text_for_tts(text : str) -> str:
     Parameters
     ----------
     text : str
-        Some text returned from the response genertor.
-    
+        Some text returned from the response generator.
+
     Returns
     -------
     str
@@ -35,7 +35,7 @@ def clean_text_for_tts(text : str) -> str:
     return cleaned
 
 
-def google_asr(
+def google_tts(
     text : str,
     output_audio_path : str,
     language : str):
@@ -48,13 +48,13 @@ def google_asr(
         The text to be synthesized.
     output_audio_path : str
         Where the .wav file should be saved.
-    lang : str
+    language : str
         Language. "en", "zh-cn", etc.
 
     Returns
     -------
     str
-        The `output_audio_path`
+        Path to the generated WAV audio file.
     """
     tts = gTTS(text=text,
                lang=language)
@@ -88,12 +88,10 @@ def command_line_say(
 
         # Use macOS TTS to generate AIFF
         subprocess.run(["say", "-o", filename_aiff, text])
-        logging.debug(f"Generated AIFF: {filename_aiff}")
 
         # Convert to WAV using ffmpeg
         subprocess.run(["ffmpeg", "-y", "-i", filename_aiff, output_audio_path],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        logging.debug(f"Converted to WAV: {output_audio_path}")
 
         # Cleanup
         os.remove(filename_aiff)    
@@ -134,10 +132,10 @@ def pytts_asr(
 
 
 def text_to_speech(
-    text : str,
     output_audio_path : str,
+    text : str,
     model : str,
-    language : str) -> str:
+    language : str) -> Optional[str]:
     """
     Converts some text to a .wav audio file.
 
@@ -156,94 +154,126 @@ def text_to_speech(
             - "pytts"    
                 Pytts library. NOTE: only on Raspbian.
     language : str
-        The language. "en", "zh-cn", etc.
+        Language for tts synthesis. E.g. "en", "zh-CN", etc.
+
     Returns
     -------
     str
-        The `output_audio_path`
+        Path to the generated WAV audio file.
     """
     # Purge unwanted characters from the text.
     text = clean_text_for_tts(text)
 
     # Choose the right model.
     if model == "command_line":
-        output_audio_path = command_line_say(
-            text=text,
-            output_audio_path=output_audio_path)
+        return command_line_say(
+                text=text,
+                output_audio_path=output_audio_path)
 
-    if model == "google_tts":
-        output_audio_path = google_asr(
-            text=text,
-            output_audio_path=output_audio_path,
-            language=language)
+    elif model == "google_tts":
+        return google_tts(
+                text=text,
+                output_audio_path=output_audio_path,
+                language=language)
+
+    elif model == "pytts":
+        return pytts_asr(
+                text=text,
+                output_audio_path=output_audio_path)
+
+    # No TTS processing needs to be done, because `text` is actually
+    # the path to a file to be played!
+    elif model =="jeff":
+        return text
     
-    if model == "pytts":
-        output_audio_path = pytts_asr(
-            text=text,
-            output_audio_path=output_audio_path)
-    
-    if model =="jeff":
-        return text # This is atually the output filepath
-
-    # Return is not strictly necessary, because it copies one of the args.
-    return output_audio_path
+    else:
+        raise ValueError(f"Unsupported TTS model: {model}")
 
 
-def phone_is_down() -> bool:
-    return not phone_picked_up()
-
-
-def tts_task(
-    text : str,
-    output_audio_path : str,
-    model: str,
-    language : str) -> str:
-    text = clean_text_for_tts(text)
-    return text_to_speech(text,
-                          output_audio_path,
-                          model,
-                          language)
-
-
-def killable_text_to_speech(
-    text: str,
-    output_audio_path: str,
-    model: str,
-    language : str, 
-    kill_check=phone_is_down,
-    check_interval: float = 0.1
-) -> str | None:
+class TextToSpeechAPI(Resource):
     """
-    Converts text to speech, allowing early termination via a kill check.
+    RESTful API resource for Text-to-Speech (TTS) conversion.
+
+    Exposes a POST endpoint at `/tts` that accepts JSON input containing text
+    and TTS parameters, and returns the path to the generated audio file.
+
+    Expected JSON input fields:
+        - text (str): The text to be converted to speech.
+        - model (str): The TTS model to use (e.g., "google_tts", "pytts", "command_line").
+        - output_audio_path (str): Desired output file path for the generated audio (.wav).
+        - language (str): Language code for TTS (e.g., "en", "zh-cn").
+
+    Returns
+    -------
+        JSON response with:
+        - status (str): "success" or "error"
+        - audio_path (str): Path to the generated audio file (on success)
+        - message (str): Error message (on failure)
     """
+    def post(self):
+        """
+        Handle POST requests to perform text-to-speech synthesis.
 
-    killable = KillableFunction(
-        func=tts_task,
-        args=(text, output_audio_path, model, language),
-        kill_check=kill_check,
-        check_interval=check_interval,
-        use_thread=False
-    )
+        Reads JSON data from the request body, invokes the text_to_speech function
+        with the provided parameters, and returns the resulting audio file path.
 
-    return killable.run()
+        Raises
+        ------
+            KeyError: If any expected JSON fields are missing.
+            Exception: For errors during TTS conversion.
+        """
+        try:
+            # Parse JSON input from client request.
+            data = request.get_json()
+
+            # Extract required parameters.
+            text = data["text"]
+            model = data["model"]
+            output_audio_path = data["output_audio_path"]
+            language = data["language"]
+
+            # Sanitize the path so system files can't be erased.
+            if not output_audio_path.endswith(".wav"):
+                raise ValueError("Output file must be a .wav file.")
+
+            # Perform text-to-speech conversion.
+            filepath = text_to_speech(
+                output_audio_path=output_audio_path,
+                text=text,
+                model=model,
+                language=language)
+
+            # Return success response with audio file path.
+            return jsonify({"status": "success", "audio_path": filepath})
+
+        # Return error response with exception message.
+        except KeyError as ke:
+            return jsonify({"status": "error", "message": f"Missing field: {ke}"}), 400
+
+        # Catch remaining exceptions.
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# Add the resources to the Flask app.
+api.add_resource(TextToSpeechAPI, "/tts")
+api.add_resource(HealthCheckAPI, "/health")
 
 
 
 if __name__ == "__main__":
 
-    from utils import play_audio
+    # Run the TTS server.
+    app.run(
+        host="0.0.0.0",
+        port=8010,
+        debug=True)
 
-    text = "我是美国人"
+    """
+    Example curl request:
 
-    google_asr(
-        text=text,
-        output_audio_path="_tmp.wav",
-        language="zh-cn")
-
-    tts = play_audio(
-        filepath="_tmp.wav",
-        start_delay=0,
-        looping=False,
-        blocking=True,
-        killable=False)
-    tts.start()
+    curl -X POST http://localhost:8010/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "你好，世界", "model": "google_tts", 
+    "output_audio_path": "_example_tts.wav", "language": "zh-CN"}'
+    """
