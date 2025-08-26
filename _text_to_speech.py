@@ -226,12 +226,21 @@ def killable_text_to_speech(
 
 
 
-
 if __name__ == "__main__":
 
-    text = "the quick brown fox jumps over the lazy dog."
+    from utils import play_audio
+
+    text = "我是美国人"
 
     google_asr(
         text=text,
         output_audio_path="_tmp.wav",
-        language="en")
+        language="zh-cn")
+
+    tts = play_audio(
+        filepath="_tmp.wav",
+        start_delay=0,
+        looping=False,
+        blocking=True,
+        killable=False)
+    tts.start()
