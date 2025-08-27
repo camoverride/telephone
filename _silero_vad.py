@@ -215,10 +215,10 @@ class AudioRecordingAPI(Resource):
                 max_recording_duration=max_duration)
 
             if audio_data is None:
-                return jsonify({
-                    "status": "error",
-                    "message": "No speech detected or recording duration too short."
-                }), 400
+                return {
+                    "status": "failure",
+                    "message": "No speech detected."
+                }, 200
 
             # Convert the audio to base64.
             audio_b64 = encode_audio_to_base64(audio_data)
@@ -230,17 +230,17 @@ class AudioRecordingAPI(Resource):
 
         except ValueError as ve:
             logger.error(f"ValueError: {ve}")
-            return jsonify({
+            return {
                 "status": "error",
                 "message": str(ve)
-            }), 400
+            }, 400
 
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
-            return jsonify({
+            return {
                 "status": "error",
                 "message": "An unexpected error occurred."
-            }), 500
+            }, 500
 
 
 # Add the resources to the Flask app.

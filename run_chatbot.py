@@ -1,223 +1,189 @@
-import time
-import traceback
-import yaml
 import logging
-from utils import phone_picked_up, play_audio, ignored_phrases, print_text
-from _silero_vad import record_audio_with_silero_vad_api
-from _speech_to_text import speech_to_text_api
-from _response import get_response_api
-from _text_to_speech import text_to_speech_api
+import time
+from utils_apis import KillableFunctionRunner, record_audio_api, \
+    speech_to_text_api, response_api, text_to_speech_api
+from utils_gpio import phone_picked_up
+from utils_play_audio import play_audio
 
 
 
 # Set up logging configuration.
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Load config file.
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-
-
-def main():
-    # Define sounds that will be played and might need to be closed.
-    starting_prompt = None
-    beep = None
-    recording_sound = None
-    thinking_sound = None
-    hang_up_sound = None
-    response_audio = None
-
-    # Main event loop that should always run, catching errors and continuing
-    # from the beginning if the phone reciever is put down.
-    while True:
-        try:
-            if phone_picked_up():
-                ########## STEP 1: Starting Prompt ##########
-                # Play starting prompt at beginning of interaction.
-                logging.info("--- Playing starting prompt")
-
-                # Play the prompt after a delay. Closes automatically because looping=False.
-                starting_prompt = play_audio(
-                    filepath=config["starting_audio_prompt"],
-                    start_delay=config["prompt_start_delay"],
-                    looping=False,
-                    blocking=True,
-                    killable=True)
-                starting_prompt.start()
-
-                # Play the beep sound. Closes automatically because looping=False.
-                beep = play_audio(
-                    filepath=config["prompt_closing_sound"],
-                    start_delay=0,
-                    looping=False,
-                    blocking=True,
-                    killable=True)
-                beep.start()
-
-                ########## STEP 2: Record speech using VAD ##########
-                # Record speech from the user, stopping the recording when the user stops speaking.
-                logging.info("--- Recording audio")
-
-                # Play the recording sound. Keeps looping until closed.
-                recording_sound = play_audio(
-                    filepath=config["recording_background_sound"],
-                    start_delay=0,
-                    looping=True,
-                    blocking=False,
-                    killable=True)
-                recording_sound.start()
-
-                # Start recording audio using VAD.
-                recorded_audio = \
-                    record_audio_with_silero_vad(
-                        silence_duration_to_stop=config["silence_timeout"],
-                        min_recording_duration=config["min_recording_duration"],
-                        max_recording_duration=config["max_recording_duration"])
-
-                # Stop the recording sound.
-                if recording_sound and hasattr(recording_sound, "stop"):
-                    recording_sound.stop()
-
-                ########## STEP 3: Speech Recognition ##########
-                logging.info("--- Performing ASR")
-
-                # Play the "thinking" sound. Keeps looping until closed.
-                # NOTE: this plays all the way through step 5.
-                thinking_sound = play_audio(
-                    filepath=config["thinking_sound"],
-                    start_delay=0,
-                    looping=True,
-                    blocking=False,
-                    killable=True)
-                thinking_sound.start()
-
-                # Perform Speech recognition on the audio file.
-                if recorded_audio is not None:
-                    recognized_text = \
-                        speech_to_text(
-                            audio=recorded_audio,
-                            model=config["speech_to_text_model"])
-
-                logging.info(f"Recognized text :  {recognized_text}")
-
-                # Check if the audio input should be ignored 
-                # (empty, contains profanity, etc.)
-                if recognized_text:
-                    if ignored_phrases(recognized_text):
-                        logging.info("IGNORING INPUT, continuing")
-                        continue
-
-                ########## STEP 4: Response generation ##########
-                logging.info("--- Generating response")
-
-                # Try using the model from the config. If it fails, use a backup model.
-                try:
-                    if recognized_text:
-                        response_text = get_response(
-                            text=recognized_text,
-                            model=config["response_model"])
-
-                        logging.info(f"Generated response text : {response_text}")
-                    else:
-                        raise TypeError("input_text is None!")
-
-                # If there is an exception, try a fall-back model.
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning("Trying fallback response model: DEEPSEEK")
-                    config["response_model"] = config["fallback_response_model"]
-
-                    if recognized_text:
-                        response_text = get_response(
-                            text=recognized_text,
-                            model=config["fallback_response_model"])
-
-                        logging.info(f"Generated response text [fallback model]: \
-                                        {response_text}")
-                    else:
-                        raise TypeError("input_text is None!")
-
-                ########## STEP 5: Text to speech ##########
-                logging.info("--- Text to speech")
-
-                # Create output file with response.
-                if response_text and config["response_model"] == "jeff":
-                    output_audio_path = response_text
-    
-                elif response_text:
-                    output_audio_path = text_to_speech(
-                        output_audio_path="____af.wav",
-                        text=response_text,
-                        model=config["text_to_speech_model"])
-
-                else:
-                    raise TypeError("response_text is None!")
-
-                ########## STEP 6: Play audio! ##########
-                logging.info("--- Playing output")
-
-                # Stop the "thinking sound" that has been playing since Step 3.
-                if thinking_sound and hasattr(thinking_sound, "stop"):
-                    thinking_sound.stop()
-
-                # Play the response.
-                response_audio = play_audio(
-                    # filepath="_output_tmp.wav",
-                    filepath=output_audio_path, # audio_output
-                    start_delay=0,
-                    looping=False,
-                    blocking=True,
-                    killable=True)
-                response_audio.start()
-
-                ########## STEP 7: Final actions ##########
-                # Print the resulting text.
-                # print_text(
-                #     text=response_text,
-                #     printer_api=config["printer_server_url"])
-                # logging.info("Printing the text")
-
-                # Play the hang up sound.
-                hang_up_sound = play_audio(
-                    filepath=config["end_interaction_sound"],
-                    start_delay=0,
-                    looping=False,
-                    blocking=True,
-                    killable=True)
-                hang_up_sound.start()
-
-            # Small pause to stop the CPU from running this loop constantly.
-            else:
-                time.sleep(0.1)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Print logs to the console.
+        logging.StreamHandler(),
+        # Write logs to a file.
+        logging.FileHandler("logs/main.log")])
+logger = logging.getLogger(__name__)
+END_SIGN = "------------------------------------------"
 
 
-        # If there is an exception, continue.
-        except Exception as e:
-            logging.warning("TOP LEVEL EXCEPTION!")
-            logging.warning(traceback.format_exc())
-            continue
+def vad():
+    """
+    VAD wrapper function.
+    """
+    vad_runner = KillableFunctionRunner(
+        func=record_audio_api,
+        killer=phone_picked_up)
 
-        # Stop any dangling sounds, if they still exist.
-        finally:
-            if starting_prompt and hasattr(starting_prompt, "stop"):
-                starting_prompt.stop()
-            if beep and hasattr(beep, "stop"):
-                beep.stop()
-            if recording_sound and hasattr(recording_sound, "stop"):
-                recording_sound.stop()
-            if thinking_sound and hasattr(thinking_sound, "stop"):
-                thinking_sound.stop()
-            if hang_up_sound and hasattr(hang_up_sound, "stop"):
-                hang_up_sound.stop()
-            if response_audio and hasattr(response_audio, "stop"):
-                response_audio.stop()
+    try:
+        audio = vad_runner.start(
+            silence_duration_to_stop=1, # 3
+            min_recording_duration=2, # 5
+            max_recording_duration=10, # 25
+            recording_api_url="http://localhost:8010/record")
+        
+        return audio
 
+    except Exception as e:
+        print(f"Error during VAD!")
+        return None
+
+
+def asr(audio):
+    """
+    ASR wrapper funtion.
+    """
+    asr_runner = KillableFunctionRunner(
+        func=speech_to_text_api,
+        killer=phone_picked_up)
+
+    try:
+        transcription = asr_runner.start(
+            audio_b64=audio,
+            model="vosk",
+            asr_server_url="http://localhost:8011/asr")
+
+        return transcription
+
+    except Exception:
+        print(f"Error during ASR!")
+        return None
+
+
+def respond(transcription):
+    """
+    Response wrapper.
+    """
+    response_runner = KillableFunctionRunner(
+        func=response_api,
+        killer=phone_picked_up)
+
+    try:
+        response = response_runner.start(
+            text=transcription,
+            model="deepseek",
+            response_api_url="http://localhost:8012/response")
+
+        return response
+
+    except Exception as e:
+        print(f"Error during Thinking: {str(e)}")
+        return None
+
+
+def tts(response):
+    tts_runner = KillableFunctionRunner(
+        func=text_to_speech_api,
+        killer=phone_picked_up)
+
+    try:
+        audio_path = tts_runner.start(
+            output_audio_path="__output.wav",
+            text=response,
+            model="jeff",
+            language="en",
+            tts_server_url="http://localhost:8013/tts")
+
+        return audio_path
+
+    except Exception as e:
+        print(f"Error during TTS: {str(e)}")
+        return None
 
 
 if __name__ == "__main__":
+    """
+    First start each of the 4 servers by running:
 
-    # TODO: move config down here and load into function args, to add transparency
-    main()
+        python _silero_vad.py
+        python _speech_to_text.py
+        python _response.py
+        python _text_to_speech.py
+    """
+    while True:
+        logging.info("--------STARTING NEW INTERACTION--------")
+        while True:
+            try:
+                if phone_picked_up():
+                    ##### VAD (Listening) #####
+                    try:
+                        start_timer = time.time()
+                        logger.info("Starting VAD")
+                        audio = vad()
+                        logger.info(f"Completed VAD in [{time.time() - start_timer}]")
+
+                        if not audio:
+                            logger.warning("No audio detected. Skipping this round.")
+                            logger.info(END_SIGN)
+                            continue
+                    except Exception as e:
+                        logging.warning(e)
+                        continue
+
+                    ##### ASR (Speech Recognition) #####
+                    start_timer = time.time()
+                    logger.info("Starting ASR")
+                    transcription = asr(audio)
+                    logger.info(f"Completed ASR in [{time.time() - start_timer}] ")
+                    logger.info(f"    > {transcription}")
+
+                    if not transcription:
+                        logger.warning("No transcription. Skipping this round.")
+                        logger.info(END_SIGN)
+                        continue
+
+                    ##### Response (Thinking) #####
+                    start_timer = time.time()
+                    logger.info("Starting Response")
+                    response = respond(transcription)
+                    logger.info(f"Completed Response in [{time.time() - start_timer}] ")
+                    logger.info(f"    > {response}")
+
+                    if not response:
+                        logger.warning("No response. Skipping this round.")
+                        logger.info(END_SIGN)
+                        continue
+
+                    #### TTS (Text to Speech) #####
+                    start_timer = time.time()
+                    logger.info("Starting TTS")
+                    audio_file_path = tts(response)
+                    logging.info(f"Completed TTS in [{time.time() - start_timer}] ")
+                    logger.info(f"    > {audio_file_path}")
+
+                    if not audio_file_path:
+                        logger.warning("No file generated. Skipping this round.")
+                        logger.info(END_SIGN)
+                        continue
+
+                    ##### Play the audio #####
+                    start_timer = time.time()
+                    logger.info("Playing audio.")
+                    recording = play_audio(
+                        filepath=audio_file_path,
+                        start_delay=0,
+                        looping=False,
+                        blocking=True,
+                        killable=True)
+                    recording.start()
+                    logger.info(f"Finished playing audio in [{time.time() - start_timer}] ")
+                    logger.info(END_SIGN)
+                else:
+                    time.sleep(2)
+
+            except:
+                time.sleep(5)
+                continue

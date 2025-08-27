@@ -194,7 +194,7 @@ def record_audio_api(
 
     try:
         # Timeout must be longer than max_recording_duration.
-        timeout = max_recording_duration + 1
+        timeout = max_recording_duration + 1 + 2
 
         # Send the POST request to the API.
         response = requests.post(
@@ -214,7 +214,8 @@ def record_audio_api(
             return result.get("audio")
 
         else:
-            raise RuntimeError(f"Error from API: {result.get('message')}")
+            pass
+            # raise RuntimeError(f"Error from API: {result.get('message')}")
 
     except requests.RequestException as e:
         # Handle any connection or request exceptions
