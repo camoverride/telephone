@@ -6,8 +6,10 @@ import os
 import platform
 import pyttsx3
 import re
+import requests
 import subprocess
 from typing import Optional
+import yaml
 from utils import HealthCheckAPI
 
 
@@ -27,6 +29,11 @@ logging.basicConfig(
         # Write logs to a file.
         logging.FileHandler("logs/tts_server.log")])
 logger = logging.getLogger(__name__)
+
+
+# Load config file.
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 
 def clean_text_for_tts(text : str) -> str:
@@ -145,26 +152,24 @@ def pytts_asr(
     return output_audio_path
 
 
-def jeff_model(text : str) -> str:
-    """
-    The custom jeff model which involves pre-recorded speech.
+def jeff_model(
+    text : str,
+    server_url : str,
+    output_audio_path : str) -> str:
 
-    The argument `text` should in fact be the path to an
-    already-recorded audio file, so it is simply returned.
+    payload = {"text": text}
+    headers = {"Content-Type": "application/json"}
 
-    NOTE: This is a hack to force API consistency.
+    response = requests.post(server_url, json=payload, headers=headers)
 
-    Parameters
-    ----------
-    text : str
-        The path to a pre-recorded response.
-
-    Returns
-    -------
-    str
-        A copy of the `text` parameter.
-    """
-    return text
+    if response.status_code == 200:
+        # Save response.content directly to file
+        os.makedirs(os.path.dirname(output_audio_path) or '.', exist_ok=True)
+        with open(output_audio_path, 'wb') as f:
+            f.write(response.content)
+        return output_audio_path
+    else:
+        raise RuntimeError(f"Server returned error {response.status_code}: {response.text}")
 
 
 def text_to_speech(
@@ -218,7 +223,10 @@ def text_to_speech(
                 output_audio_path=output_audio_path)
 
     elif model == "jeff":
-        return jeff_model(text=text)
+        return jeff_model(
+            text=text,
+            server_url=config["jeff_tts_model_url"],
+            output_audio_path=output_audio_path)
 
     else:
         raise ValueError(f"Unsupported TTS model: {model}")
@@ -304,4 +312,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=8013,
-        debug=True)
+        debug=False,
+        use_reloader=False)

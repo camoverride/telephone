@@ -38,11 +38,24 @@ with open("config.yaml", "r") as f:
 # Load Markov model.
 MARKOV_MODEL = load_model("models/markov/_random_poems_model.pkl")
 
-# Deepseek API key. Git ignored.
-DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
+
+if (config["response_model"] == "deepseek") or \
+        (config["fallback_response_model"] == "deepseek"):
+    # Deepseek API key. Git ignored.
+    DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
+    with open(DEEPSEEK_API_KEY_PATH, "r") as f:
+        DEEPSEEK_API_KEY = f.read().strip()
+
+    # Access the client.
+    DEEPSEEK_CLIENT = OpenAI(
+        api_key=DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com")
 
 # Question answer database for "jeff" model.
 QA_DATABASE_PATH = "data/qa_pairs.db"
+
+# Translator model.
+translator = Translator()
 
 
 
@@ -81,15 +94,17 @@ def prompt_similarity(
     cursor = conn.cursor()
 
     # Load all question embeddings and corresponding paths.
-    cursor.execute("SELECT question_embedding, path_to_answer_wav FROM qa_pairs")
+    cursor.execute("SELECT question_embedding, path_to_answer_wav, question FROM qa_pairs")
     rows = cursor.fetchall()
 
     best_similarity = -1
     best_path = None
+    best_answer = None
 
     for row in rows:
         blob = row[0]
         path = row[1]
+        answer = row[2]
 
         # Deserialize database-stored embedding.
         stored_embedding = np.frombuffer(blob, dtype=np.float32)
@@ -103,12 +118,14 @@ def prompt_similarity(
         if similarity > best_similarity:
             best_similarity = similarity
             best_path = path
+            best_answer = answer
 
     conn.close()
 
     if best_path is None:
         raise ValueError("No embeddings found in database.")
 
+    logger.info(f"Corresponding answer : {best_answer}")
     return best_path
 
 
@@ -130,7 +147,6 @@ def translate(
     str
         The text, translated.
     """
-    translator = Translator()
     result = translator.translate(text, dest=language)
 
     return result.text  # type: ignore
@@ -155,17 +171,8 @@ def deepseek_model(
     str
         The response from the deepseek model.
     """
-    # Locally saved API key.
-    with open(DEEPSEEK_API_KEY_PATH, "r") as f:
-        deepseek_api_key = f.read().strip()
-
-    # Access the client.
-    client = OpenAI(
-        api_key=deepseek_api_key,
-        base_url="https://api.deepseek.com")
-
     # Send request to the API.
-    response = client.chat.completions.create(
+    response = DEEPSEEK_CLIENT.chat.completions.create(
         model="deepseek-chat",
         messages=[
             {"role": "system",
@@ -306,17 +313,21 @@ def get_response(
     if model == "deepseek":
         try:
             response = deepseek_model(
-                        text=text,
-                        system_prompt=config["system_prompt"])
+                text=text,
+                system_prompt=config["system_prompt"])
             return response
         except requests.exceptions.RequestException as e:
             logger.error(f"Request to deepseek API failed: {e}")
 
     if model == "jeff":
-        response = prompt_similarity(
-            text=text,
-            dataset_path=QA_DATABASE_PATH)
-        return response
+        try:
+            response = prompt_similarity(
+                text=text,
+                dataset_path=QA_DATABASE_PATH)
+            return response
+        except Exception as e:
+            logger.error(f"[jeff] Failed to fetch response: {e}")
+            return None
 
     return None
 
@@ -405,4 +416,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=8012,
-        debug=True)
+        debug=False,
+        use_reloader=False)

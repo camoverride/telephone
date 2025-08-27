@@ -110,7 +110,7 @@ def create_embedding(text : str) -> np.ndarray:
     """
     embedding = _embedding_model.encode(text)
 
-    return np.ndarray(embedding)  # type: ignore
+    return embedding  # type: ignore
 
 
 def encode_audio_to_base64(

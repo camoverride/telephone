@@ -75,7 +75,7 @@ class KillableFunctionRunner:
 
         except Exception as e:
             # Send exception back if something goes wrong.
-            logger.warning("[Child] Exception occurred:", e)
+            logger.warning("[Child] Exception occurred: %s", e)
             queue.put(e)
 
 
@@ -193,9 +193,10 @@ def record_audio_api(
         "max_recording_duration": max_recording_duration}
 
     try:
-        # Timeout must be longer than max_recording_duration
+        # Timeout must be longer than max_recording_duration.
         timeout = max_recording_duration + 1
-        # Send the POST request to the API
+
+        # Send the POST request to the API.
         response = requests.post(
             recording_api_url,
             json=payload,
@@ -211,12 +212,14 @@ def record_audio_api(
         if result.get("status") == "success":
             # Return the base64-encoded audio
             return result.get("audio")
+
         else:
             raise RuntimeError(f"Error from API: {result.get('message')}")
 
     except requests.RequestException as e:
         # Handle any connection or request exceptions
         raise RuntimeError(f"Failed to contact recording API: {e}")
+
     except ValueError as ve:
         # Handle JSON parsing errors
         raise RuntimeError(f"Failed to parse the response: {ve}")

@@ -11,6 +11,10 @@ from utils import encode_audio_to_base64, HealthCheckAPI
 
 
 
+# Create a global PyAudio instance once.
+pa = pyaudio.PyAudio()
+
+
 # Initialize Flask application and RESTful API.
 app = Flask(__name__)
 api = Api(app)
@@ -65,14 +69,17 @@ def record_audio_with_silero_vad(
     sample_rate = 16000
     chunk_size = 1024
 
-    # Audio recording object.
-    pa = pyaudio.PyAudio()
+    # Open audio stream.
     stream = pa.open(
         format=pyaudio.paInt16,
         channels=1,
         rate=sample_rate,
         input=True,
         frames_per_buffer=chunk_size)
+    
+    start_time = time.time()
+    max_no_speech_duration = max_recording_duration + 1  # Or some reasonable max duration
+
 
     # Raw int16 numpy arrays waiting for VAD check.
     audio_buffer = []
@@ -86,6 +93,10 @@ def record_audio_with_silero_vad(
 
     try:
         while True:
+            if not recording_started and (time.time() - start_time) > max_no_speech_duration:
+                logging.info(f"No speech detected within {max_no_speech_duration}s, stopping.")
+                break
+
             # Read from the audio stream, appending to the buffer too.
             data = stream.read(chunk_size, exception_on_overflow=False)
             audio_np = np.frombuffer(data, dtype=np.int16)
@@ -141,18 +152,23 @@ def record_audio_with_silero_vad(
 
                 else:
                     # Not recording yet, limit buffer to prevent memory bloat
-                    max_buffer_samples = int(buffer_duration * sample_rate * 5)
-                    if sum(len(c) for c in audio_buffer) > max_buffer_samples:
-                        audio_buffer.pop(0)
+                    # max_buffer_samples = int(buffer_duration * sample_rate * 5)
+                    # if sum(len(c) for c in audio_buffer) > max_buffer_samples:
+                    #     audio_buffer.pop(0)
+                    audio_buffer.clear()
+                    # Optionally sleep a tiny bit to avoid busy loop
+                    time.sleep(0.01)
 
     finally:
-        stream.stop_stream()
-        stream.close()
-        pa.terminate()
+        try:
+            stream.stop_stream()
+            stream.close()
+        except Exception as e:
+            logging.warning(f"Stream close error: {e}")
 
-    if not recorded_frames:
-        logging.info("No speech was detected. Returning None.")
-        return None
+        if not recorded_frames:
+            logging.info("No speech was detected. Returning None.")
+            return None
 
     recorded_audio = np.concatenate(recorded_frames)
 
@@ -239,4 +255,8 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=8010,
-        debug=True)
+        debug=False,
+        use_reloader=False)
+
+    import atexit
+    atexit.register(pa.terminate)

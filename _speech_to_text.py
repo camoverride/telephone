@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 import io
 import json
-import logging
 import numpy as np
 from vosk import Model, KaldiRecognizer
 import wave
@@ -15,17 +14,6 @@ from utils import HealthCheckAPI
 app = Flask(__name__)
 api = Api(app)
 
-
-# Set up logging configuration.
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        # Print logs to the console.
-        logging.StreamHandler(),
-        # Write logs to a file.
-        logging.FileHandler("logs/asr_server.log")])
-logger = logging.getLogger(__name__)
 
 # Import the Vosk speech recognition model (small English model for now).
 model = Model("models/vosk-model-small-en-us-0.15")
@@ -143,7 +131,7 @@ class SpeechToTextAPI(Resource):
 
             # Base64-encoded audio data.
             audio_b64 = data["audio"]
-
+            
             # Normalize model name.
             model_name = data["model"].strip().lower()
 
@@ -152,7 +140,7 @@ class SpeechToTextAPI(Resource):
 
             # Extract PCM audio data from the WAV file.
             with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
-                sample_rate = wav.getframerate()
+                sample_rate = wav.getframerate() # Sampling rate of the audio.
 
                 if wav.getnchannels() != 1:
                     raise ValueError("Audio must be mono-channel.")

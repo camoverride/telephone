@@ -3,10 +3,10 @@ import traceback
 import yaml
 import logging
 from utils import phone_picked_up, play_audio, ignored_phrases, print_text
-from _silero_vad import record_audio_with_silero_vad
-from _speech_to_text import speech_to_text
-from _response import get_response
-from _text_to_speech import text_to_speech
+from _silero_vad import record_audio_with_silero_vad_api
+from _speech_to_text import speech_to_text_api
+from _response import get_response_api
+from _text_to_speech import text_to_speech_api
 
 
 

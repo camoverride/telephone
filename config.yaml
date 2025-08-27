@@ -16,20 +16,24 @@ speech_to_text_model: vosk
 
 # Response model options: 
 # `echo`, `random_markov`, `tiny_llama`, `deepseek`, `jeff`.
-response_model: translate
-text_to_speech_language: zh-CN
-fallback_response_model: tiny_llama
+response_model: deepseek
+text_to_speech_language: zh-CN # not applicable with all models.
+fallback_response_model: deepseek
 
 # TTS model options: `command_line`, `google_tts`, `pytts`
 # NOTE: `google_tts` requires internet connection!
 text_to_speech_model: google_tts
+jeff_tts_model_url: http://100.116.247.74:5000/tts
 
 
 
 
 
 # System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
-system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
+# system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
+# system_prompt: Give a very short reply in the voice of a rich person. No more than 15 words."
+system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
+
 
 # API endpoint if using tiny_llama.
 tiny_llama_api_url: "http://100.116.247.74:5000/generate"
