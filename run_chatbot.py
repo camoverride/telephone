@@ -55,6 +55,7 @@ if __name__ == "__main__":
                     blocking=True,
                     killable=True)
                 beep.start()
+                beep.stop()
 
                 while True:
                     if phone_picked_up():

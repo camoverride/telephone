@@ -135,7 +135,7 @@ Get the logs:
 
 This depends on 4 servers: `vad`, `asr`, `response`, and `tts`.
 
-- `cat <server>.service > ~/.config/systemd/user/<server>.service`
+- `cat services/<server>.service > ~/.config/systemd/user/<server>.service`
 - `systemctl --user daemon-reload`
 - `systemctl --user enable <server>.service`
 - `systemctl --user start <server>.service`

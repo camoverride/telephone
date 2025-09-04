@@ -1,5 +1,5 @@
 [Unit]
-Description=run telephone chatbot service
+Description=run VAD
 After=default.target
 
 [Service]
