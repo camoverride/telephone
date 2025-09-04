@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
                         ##### Response (Thinking) #####
                         # Get a filler "thinking sound" to play once.
-                        thinking_file_path = get_random_file("prompts/4_thinking/google")
+                        thinking_file_path = get_random_file("prompts/4_thinking/google_tts")
                         thinking_background_music = play_audio(
                             filepath=thinking_file_path,
                             start_delay=0,
