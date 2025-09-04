@@ -28,6 +28,7 @@ if __name__ == "__main__":
             beep = None
             listening_background_music = None
             thinking_background_music = None
+            reply_audio = None
             try:
                 logging.info("--------STARTING NEW INTERACTION--------")
                 # Opening sound.
