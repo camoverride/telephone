@@ -3,6 +3,8 @@ import multiprocessing
 import requests
 import time
 from typing import Any, Callable, Optional
+import yaml
+from utils_gpio import phone_picked_up
 
 
 
@@ -75,7 +77,8 @@ class KillableFunctionRunner:
 
         except Exception as e:
             # Send exception back if something goes wrong.
-            logger.warning("[Child] Exception occurred: %s", e)
+            logger.warning("[Child] Exception occurred:")
+            logger.warning(e)
             queue.put(e)
 
 
@@ -275,7 +278,8 @@ def speech_to_text_api(
 def response_api(
     text : str,
     model : str,
-    response_api_url : str) -> Optional[str]:
+    response_api_url : str,
+    system_prompt) -> Optional[str]:
     """
     Sends a request to the TextResponseAPI to generate a response based on input text.
 
@@ -287,6 +291,8 @@ def response_api(
         The model to use (e.g., "translate", "tiny_llama", "deepseek").
     response_api_url : str
         URL of the remote TextResponseAPI endpoint.
+    system_prompt : str
+        The system prompt which the response is conditioned on (if applicable).
 
     Returns
     -------
@@ -297,11 +303,15 @@ def response_api(
     """
     payload = {
         "text": text,
-        "model": model}
+        "model": model,
+        "system_prompt": system_prompt}
 
     try:
         # Send the POST request to the API
-        response = requests.post(response_api_url, json=payload, timeout=10)
+        response = requests.post(
+            response_api_url,
+            json=payload,
+            timeout=10)
         
         # Raise an error for any failed responses
         response.raise_for_status()
@@ -360,7 +370,10 @@ def text_to_speech_api(
         "language": language}
 
     try:
-        response = requests.post(tts_server_url, json=payload, timeout=10)
+        response = requests.post(
+            tts_server_url,
+            json=payload,
+            timeout=10)
         response.raise_for_status()
         result = response.json()
 
@@ -371,3 +384,79 @@ def text_to_speech_api(
 
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to contact TTS server: {e}")
+
+
+
+# Load config file.
+with open("config.yaml", "r") as f:
+    CONFIG = yaml.safe_load(f)
+
+
+def vad():
+    """
+    VAD wrapper function.
+    """
+    vad_runner = KillableFunctionRunner(
+        func=record_audio_api,
+        killer=phone_picked_up)
+
+    audio = vad_runner.start(
+        silence_duration_to_stop=CONFIG["silence_duration_to_stop"],
+        min_recording_duration=CONFIG["min_recording_duration"],
+        max_recording_duration=CONFIG["max_recording_duration"],
+        recording_api_url=CONFIG["vad_api_url"])
+    
+    return audio
+
+
+
+def asr(audio):
+    """
+    ASR wrapper funtion.
+    """
+    asr_runner = KillableFunctionRunner(
+        func=speech_to_text_api,
+        killer=phone_picked_up)
+
+    transcription = asr_runner.start(
+        audio_b64=audio,
+        model=CONFIG["asr_model"],
+        asr_server_url=CONFIG["asr_api_url"])
+
+    return transcription
+
+
+def respond(transcription):
+    """
+    Response wrapper function.
+    """
+    response_runner = KillableFunctionRunner(
+        func=response_api,
+        killer=phone_picked_up)
+
+    response = response_runner.start(
+        text=transcription,
+        model=CONFIG["response_model"],
+        response_api_url=CONFIG["response_api_url"],
+        system_prompt=CONFIG["system_prompt"])
+
+    return response
+
+
+def tts(response):
+    """
+    TTS wrapper function.
+    """
+    tts_runner = KillableFunctionRunner(
+        func=text_to_speech_api,
+        killer=phone_picked_up)
+
+    audio_path = tts_runner.start(
+        text=response,
+        output_audio_path=CONFIG["tts_file_output_path"],
+        model=CONFIG["text_to_speech_model"],
+        language=CONFIG["tts_language"],
+        tts_server_url=CONFIG["tts_api_url"])
+
+    return audio_path
+

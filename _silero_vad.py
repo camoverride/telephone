@@ -36,9 +36,9 @@ silero_model = load_silero_vad()
 
 
 def record_audio_with_silero_vad(
-    silence_duration_to_stop: float = 3.0,
-    min_recording_duration: float = 5.0,
-    max_recording_duration: float = 30.0) -> Optional[np.ndarray]:
+    silence_duration_to_stop: float,
+    min_recording_duration: float,
+    max_recording_duration: float) -> Optional[np.ndarray]:
     """
     Records audio from the mic using Silero VAD. Starts when speech is
     detected, stops after `silence_duration_to_stop` seconds of silence,
@@ -78,8 +78,7 @@ def record_audio_with_silero_vad(
         frames_per_buffer=chunk_size)
     
     start_time = time.time()
-    max_no_speech_duration = max_recording_duration + 1  # Or some reasonable max duration
-
+    max_no_speech_duration = max_recording_duration + 1
 
     # Raw int16 numpy arrays waiting for VAD check.
     audio_buffer = []
@@ -187,9 +186,9 @@ class AudioRecordingAPI(Resource):
 
         Expected JSON body:
         {
-            "silence_duration_to_stop": float,  # Optional, default is 3.0
-            "min_recording_duration": float,    # Optional, default is 5.0
-            "max_recording_duration": float     # Optional, default is 30.0
+            "silence_duration_to_stop": float,
+            "min_recording_duration": float,
+            "max_recording_duration": float
         }
 
         Returns:
@@ -204,9 +203,9 @@ class AudioRecordingAPI(Resource):
             data = request.get_json()
 
             # Get parameters with defaults.
-            silence_duration = data.get('silence_duration_to_stop', 3.0)
-            min_duration = data.get('min_recording_duration', 5.0)
-            max_duration = data.get('max_recording_duration', 30.0)
+            silence_duration = data.get("silence_duration_to_stop")
+            min_duration = data.get("min_recording_duration")
+            max_duration = data.get("max_recording_duration")
 
             # Start recording using Silero VAD.
             audio_data = record_audio_with_silero_vad(
@@ -229,14 +228,16 @@ class AudioRecordingAPI(Resource):
             })
 
         except ValueError as ve:
-            logger.error(f"ValueError: {ve}")
+            logger.error(f"ValueError:")
+            logger.error(ve)
             return {
                 "status": "error",
                 "message": str(ve)
             }, 400
 
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
+            logger.error(f"Unexpected error:")
+            logger.error(e)
             return {
                 "status": "error",
                 "message": "An unexpected error occurred."

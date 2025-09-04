@@ -1,7 +1,6 @@
 import logging
 import time
-from utils_apis import KillableFunctionRunner, record_audio_api, \
-    speech_to_text_api, response_api, text_to_speech_api
+from utils_apis import vad, asr, respond, tts
 from utils_gpio import phone_picked_up
 from utils_play_audio import play_audio
 
@@ -20,106 +19,55 @@ logger = logging.getLogger(__name__)
 END_SIGN = "------------------------------------------"
 
 
-def vad():
-    """
-    VAD wrapper function.
-    """
-    vad_runner = KillableFunctionRunner(
-        func=record_audio_api,
-        killer=phone_picked_up)
-
-    try:
-        audio = vad_runner.start(
-            silence_duration_to_stop=1, # 3
-            min_recording_duration=2, # 5
-            max_recording_duration=10, # 25
-            recording_api_url="http://localhost:8010/record")
-        
-        return audio
-
-    except Exception as e:
-        print(f"Error during VAD!")
-        return None
-
-
-def asr(audio):
-    """
-    ASR wrapper funtion.
-    """
-    asr_runner = KillableFunctionRunner(
-        func=speech_to_text_api,
-        killer=phone_picked_up)
-
-    try:
-        transcription = asr_runner.start(
-            audio_b64=audio,
-            model="vosk",
-            asr_server_url="http://localhost:8011/asr")
-
-        return transcription
-
-    except Exception:
-        print(f"Error during ASR!")
-        return None
-
-
-def respond(transcription):
-    """
-    Response wrapper.
-    """
-    response_runner = KillableFunctionRunner(
-        func=response_api,
-        killer=phone_picked_up)
-
-    try:
-        response = response_runner.start(
-            text=transcription,
-            model="deepseek",
-            response_api_url="http://localhost:8012/response")
-
-        return response
-
-    except Exception as e:
-        print(f"Error during Thinking: {str(e)}")
-        return None
-
-
-def tts(response):
-    tts_runner = KillableFunctionRunner(
-        func=text_to_speech_api,
-        killer=phone_picked_up)
-
-    try:
-        audio_path = tts_runner.start(
-            output_audio_path="__output.wav",
-            text=response,
-            model="jeff",
-            language="en",
-            tts_server_url="http://localhost:8013/tts")
-
-        return audio_path
-
-    except Exception as e:
-        print(f"Error during TTS: {str(e)}")
-        return None
-
 
 if __name__ == "__main__":
-    """
-    First start each of the 4 servers by running:
 
-        python _silero_vad.py
-        python _speech_to_text.py
-        python _response.py
-        python _text_to_speech.py
-    """
+
     while True:
-        logging.info("--------STARTING NEW INTERACTION--------")
-        while True:
-            try:
-                if phone_picked_up():
-                    ##### VAD (Listening) #####
-                    try:
+        recording_prompt = None
+        beep = None
+        listening_background_music = None
+        thinking_background_music = None
+        try:
+            if phone_picked_up():
+                logging.info("--------STARTING NEW INTERACTION--------")
+                # Opening sound.
+                # starting_audio = choose_from_dir("prompts/1_start_prompt/jeff_starts")
+                # starting_audio = "prompts/0_begin_interaction/hello.wav"
+                starting_audio = "prompts/0_pick_up/lets_chat_google.wav"
+
+                ##### Play beginning (phone picked up) prompts #####
+                start_timer = time.time()
+                logger.info("Playing interaction starting prompt.")
+                recording_prompt = play_audio(
+                    filepath=starting_audio,
+                    start_delay=0,
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                recording_prompt.start()
+                recording_prompt.stop()
+
+                beep = play_audio(
+                    filepath="prompts/2_start_reply/beep_soft.wav",
+                    start_delay=0,
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                beep.start()
+
+                while True:
+                    if phone_picked_up():
+                        ##### VAD (Listening) #####
+                        # Play the listening sound
+                        listening_background_music = play_audio(
+                            filepath="prompts/3_waiting_for_user_input/musical_soft_background_softer.wav",
+                            start_delay=0,
+                            looping=True,
+                            blocking=False,
+                            killable=True)
+                        listening_background_music.start()
+
                         start_timer = time.time()
                         logger.info("Starting VAD")
                         audio = vad()
@@ -128,62 +76,111 @@ if __name__ == "__main__":
                         if not audio:
                             logger.warning("No audio detected. Skipping this round.")
                             logger.info(END_SIGN)
+                            listening_background_music.stop()
                             continue
-                    except Exception as e:
-                        logging.warning(e)
-                        continue
 
-                    ##### ASR (Speech Recognition) #####
-                    start_timer = time.time()
-                    logger.info("Starting ASR")
-                    transcription = asr(audio)
-                    logger.info(f"Completed ASR in [{time.time() - start_timer}] ")
-                    logger.info(f"    > {transcription}")
+                        ##### ASR (Speech Recognition) #####
+                        start_timer = time.time()
+                        logger.info("Starting ASR")
+                        transcription = asr(audio)
+                        logger.info(f"Completed ASR in [{time.time() - start_timer}] ")
+                        logger.info(f"    > {transcription}")
 
-                    if not transcription:
-                        logger.warning("No transcription. Skipping this round.")
+                        listening_background_music.stop()
+
+                        if not transcription:
+                            logger.warning("No transcription. Skipping this round.")
+                            logger.info(END_SIGN)
+                            listening_background_music.stop()
+                            continue
+
+                        ##### Response (Thinking) #####
+
+                        thinking_background_music = play_audio(
+                            filepath="prompts/4_thinking/hmm_google_padded.wav",
+                            start_delay=0,
+                            looping=False,
+                            blocking=False,
+                            killable=True)
+                        thinking_background_music.start()
+
+
+                        start_timer = time.time()
+                        logger.info("Starting Response")
+                        response = respond(transcription)
+                        logger.info(f"Completed Response in [{time.time() - start_timer}] ")
+                        logger.info(f"    > {response}")
+
+                        if not response:
+                            logger.warning("No response. Skipping this round.")
+                            logger.info(END_SIGN)
+                            thinking_background_music.stop()
+                            continue
+
+                        #### TTS (Text to Speech) #####
+                        start_timer = time.time()
+                        logger.info("Starting TTS")
+                        audio_file_path = tts(response)
+                        logging.info(f"Completed TTS in [{time.time() - start_timer}] ")
+                        logger.info(f"    > {audio_file_path}")
+
+                        if not audio_file_path:
+                            logger.warning("No file generated. Skipping this round.")
+                            logger.info(END_SIGN)
+                            thinking_background_music.stop()
+                            continue
+
+
+                        thinking_background_music.stop()
+
+
+                        ##### Play the audio #####
+                        start_timer = time.time()
+                        logger.info("Playing audio.")
+                        recording = play_audio(
+                            filepath=audio_file_path,
+                            start_delay=0,
+                            looping=False,
+                            blocking=True,
+                            killable=True)
+                        recording.start()
+                        logger.info(f"Finished playing audio in [{time.time() - start_timer}]")
                         logger.info(END_SIGN)
+
+
+                        # Clean up sounds.
+                        if recording_prompt:
+                            recording_prompt.stop()
+                        if beep:
+                            beep.stop()
+                        if listening_background_music:
+                            listening_background_music.stop()
+                        if thinking_background_music:
+                            thinking_background_music.stop()
+
+                    # Phone not picked up!
+                    # Should return to the beginning.
+                    else:
+                        time.sleep(0.1)
                         continue
 
-                    ##### Response (Thinking) #####
-                    start_timer = time.time()
-                    logger.info("Starting Response")
-                    response = respond(transcription)
-                    logger.info(f"Completed Response in [{time.time() - start_timer}] ")
-                    logger.info(f"    > {response}")
+            else:
+                time.sleep(0.1)
 
-                    if not response:
-                        logger.warning("No response. Skipping this round.")
-                        logger.info(END_SIGN)
-                        continue
+        # Top level exceptions are triggered by errors.
+        except Exception as e:
+            logger.warning("Top level exception!")
+            logger.warning(e)
+            continue
 
-                    #### TTS (Text to Speech) #####
-                    start_timer = time.time()
-                    logger.info("Starting TTS")
-                    audio_file_path = tts(response)
-                    logging.info(f"Completed TTS in [{time.time() - start_timer}] ")
-                    logger.info(f"    > {audio_file_path}")
-
-                    if not audio_file_path:
-                        logger.warning("No file generated. Skipping this round.")
-                        logger.info(END_SIGN)
-                        continue
-
-                    ##### Play the audio #####
-                    start_timer = time.time()
-                    logger.info("Playing audio.")
-                    recording = play_audio(
-                        filepath=audio_file_path,
-                        start_delay=0,
-                        looping=False,
-                        blocking=True,
-                        killable=True)
-                    recording.start()
-                    logger.info(f"Finished playing audio in [{time.time() - start_timer}] ")
-                    logger.info(END_SIGN)
-                else:
-                    time.sleep(2)
-
-            except:
-                time.sleep(5)
-                continue
+        # Clean up all sounds.
+        finally:
+            if recording_prompt:
+                recording_prompt.stop()
+            if beep:
+                beep.stop()
+            if listening_background_music:
+                listening_background_music.stop()
+            if thinking_background_music:
+                thinking_background_music.stop()
+            time.sleep(1)

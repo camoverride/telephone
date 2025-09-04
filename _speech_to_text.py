@@ -164,19 +164,22 @@ class SpeechToTextAPI(Resource):
 
             return jsonify({
                 "status": "success",
-                "text": transcription})
+                "text": transcription
+            })
 
         # Handle missing fields in the request.
         except KeyError as ke:
             return jsonify({
                 "status": "error",
-                "message": f"Missing field: {ke}"}), 400
+                "message": f"Missing field: {ke}"
+            }), 400
 
         # General error handling.
         except Exception as e:
             return jsonify({
                 "status": "error",
-                "message": str(e)}), 500
+                "message": str(e)
+            }), 500
 
 
 # Add the resources to the Flask app.

@@ -35,10 +35,6 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-# Load Markov model.
-MARKOV_MODEL = load_model("models/markov/_random_poems_model.pkl")
-
-
 if (config["response_model"] == "deepseek") or \
         (config["fallback_response_model"] == "deepseek"):
     # Deepseek API key. Git ignored.
@@ -50,6 +46,10 @@ if (config["response_model"] == "deepseek") or \
     DEEPSEEK_CLIENT = OpenAI(
         api_key=DEEPSEEK_API_KEY,
         base_url="https://api.deepseek.com")
+
+
+# Load Markov model.
+MARKOV_MODEL = load_model("models/markov/_random_poems_model.pkl")
 
 # Question answer database for "jeff" model.
 QA_DATABASE_PATH = "data/qa_pairs.db"
@@ -186,17 +186,20 @@ def deepseek_model(
     return response.choices[0].message.content
 
 
-def tiny_llama_model(text: str) -> str:
+def tiny_llama_model(
+        text: str,
+        system_prompt : str,
+        api_url) -> str:
     """
     Use the tiny-llama LLM to produce a response related to
     the `text`.
-
-    NOTE: see `config.yaml` for the system prompt and API endpoint.
 
     Parameters
     ----------
     text : str
         Something said by a user.
+    system_prompt : str
+        The system prompt that responses are conditioned on.
 
     Returns
     -------
@@ -204,11 +207,11 @@ def tiny_llama_model(text: str) -> str:
         The response from the tiny-llama model.
     """
     # NOTE: there might be a better way to format the system prompt.
-    full_prompt = f"Human: {config['system_prompt']} {text} ### Assistant:"
+    full_prompt = f"Human: {system_prompt} {text} ### Assistant:"
 
     # Hit the API endpoint.
     response = requests.post(
-        url=config["tiny_llama_api_url"],
+        url=api_url,
         json={"prompt": full_prompt},
         headers={"Content-Type": "application/json"})
 
@@ -257,7 +260,9 @@ def random_markov_model(
 
 def get_response(
     text : str,
-    model : str) -> Optional[str]:
+    model : str,
+    system_prompt : str,
+    language : str) -> Optional[str]:
     """
     Produces a text reply to a text input.
 
@@ -279,6 +284,10 @@ def get_response(
                 A call to the deepseek API.
             - "jeff"
                 Pre-recorded Bezos sounds.
+    system_prompt : str
+        The system prompt that the response is conditioned on (if applicable).
+    language : str
+        The desired language of the response.
 
     Returns
     ------
@@ -292,32 +301,48 @@ def get_response(
     if model == "translate":
         try:
             response = translate(text=text,
-                language=config["text_to_speech_language"])
+                language=language)
             return response
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Request to google translate API failed: {e}")
 
     if model == "random_markov":
-        response = random_markov_model(
-            length=30,
-            start_word="the")
-        return response
+        try:
+            response = random_markov_model(
+                length=30,
+                start_word="the")
+            return response
+
+        except Exception as e:
+            logger.error("Error with Markov model!")
+            print(e)
+            return None
 
     if model == "tiny_llama":
         try:
-            response = tiny_llama_model(text=text)
+            response = tiny_llama_model(
+                text=text,
+                api_url=None, # NOTE: not yet implemented.
+                system_prompt=system_prompt)
             return response
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request to tiny-llama API failed: {e}")
+            logger.error(f"Request to tiny-llama API failed")
+            logger.error(e)
+            return None
 
     if model == "deepseek":
         try:
             response = deepseek_model(
                 text=text,
-                system_prompt=config["system_prompt"])
+                system_prompt=system_prompt)
             return response
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request to deepseek API failed: {e}")
+            logger.error(f"Request to deepseek API failed")
+            logger.error(e)
+            return None
 
     if model == "jeff":
         try:
@@ -325,10 +350,13 @@ def get_response(
                 text=text,
                 dataset_path=QA_DATABASE_PATH)
             return response
+
         except Exception as e:
-            logger.error(f"[jeff] Failed to fetch response: {e}")
+            logger.error(f"[jeff] Failed to fetch response")
+            logger.error(e)
             return None
 
+    logger.error(f"Model name `{model}` is not recognized!")
     return None
 
 
@@ -355,14 +383,16 @@ class TextResponseAPI(Resource):
             - message: Error message (if any failure occurs)
         """
         try:
-            # Parse incoming JSON request
+            # Parse incoming JSON request.
             data = request.get_json()
 
-            # Get parameters
+            # Get parameters.
             text = data.get("text")
             model = data.get("model")
+            system_prompt = data.get("system_prompt")
+            language = data.get("language")
 
-            # Validate required fields
+            # Validate required fields.
             if not text:
                 return jsonify({
                     "status": "error",
@@ -375,8 +405,12 @@ class TextResponseAPI(Resource):
                     "message": "'model' parameter is required."
                 }), 400
 
-            # Generate the response from the specified model
-            response = get_response(text, model)
+            # Generate the response from the specified model.
+            response = get_response(
+                text=text,
+                model=model,
+                system_prompt=system_prompt,
+                language=language)
 
             if response is None:
                 return jsonify({

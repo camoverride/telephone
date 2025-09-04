@@ -286,18 +286,24 @@ class TextToSpeechAPI(Resource):
                 language=language)
 
             # Return success response with audio file path.
-            return jsonify({"status": "success",
-                            "audio_path": filepath})
+            return jsonify({
+                "status": "success",
+                "audio_path": filepath
+            })
 
         # Return error response with exception message.
         except KeyError as ke:
-            return jsonify({"status": "error", 
-                            "message": f"Missing field: {ke}"}), 400
+            return jsonify({
+                "status": "error", 
+                "message": f"Missing field: {ke}"
+            }), 400
 
         # Catch remaining exceptions.
         except Exception as e:
-            return jsonify({"status": "error",
-                            "message": str(e)}), 500
+            return jsonify({
+                "status": "error",
+                "message": str(e)
+            }), 500
 
 
 # Add the resources to the Flask app.
