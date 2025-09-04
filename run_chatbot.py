@@ -1,5 +1,6 @@
 import logging
 import time
+from utils import get_random_file
 from utils_apis import vad, asr, respond, tts
 from utils_gpio import phone_picked_up
 from utils_play_audio import play_audio
@@ -32,8 +33,6 @@ if __name__ == "__main__":
             try:
                 logging.info("--------STARTING NEW INTERACTION--------")
                 # Opening sound.
-                # starting_audio = choose_from_dir("prompts/1_start_prompt/jeff_starts")
-                # starting_audio = "prompts/0_begin_interaction/hello.wav"
                 starting_audio = "prompts/0_pick_up/lets_chat_google.wav"
 
                 ##### Play beginning (phone picked up) prompts #####
@@ -57,10 +56,12 @@ if __name__ == "__main__":
                 beep.start()
                 beep.stop()
 
+
+                # Main ASR / Response / TTS event loop.
                 while True:
                     if phone_picked_up():
                         ##### VAD (Listening) #####
-                        # Play the listening sound
+                        # Play the listening sound.
                         listening_background_music = play_audio(
                             filepath="prompts/3_waiting_for_user_input/musical_soft_background_softer.wav",
                             start_delay=0,
@@ -69,11 +70,13 @@ if __name__ == "__main__":
                             killable=True)
                         listening_background_music.start()
 
+                        # Calculate VAD time.
                         start_timer = time.time()
                         logger.info("Starting VAD")
                         audio = vad()
                         logger.info(f"Completed VAD in [{time.time() - start_timer}]")
 
+                        # Stop audio and start over.
                         if not audio:
                             logger.warning("No audio detected. Skipping this round.")
                             logger.info(END_SIGN)
@@ -81,14 +84,17 @@ if __name__ == "__main__":
                             continue
 
                         ##### ASR (Speech Recognition) #####
+                        # Calculate ASR time.
                         start_timer = time.time()
                         logger.info("Starting ASR")
                         transcription = asr(audio)
                         logger.info(f"Completed ASR in [{time.time() - start_timer}] ")
                         logger.info(f"    > {transcription}")
 
+                        # Stop the "listening" music.
                         listening_background_music.stop()
 
+                        # Stop audio and start over.
                         if not transcription:
                             logger.warning("No transcription. Skipping this round.")
                             logger.info(END_SIGN)
@@ -96,22 +102,24 @@ if __name__ == "__main__":
                             continue
 
                         ##### Response (Thinking) #####
-
+                        # Get a filler "thinking sound" to play once.
+                        thinking_file_path = get_random_file("prompts/4_thinking/google")
                         thinking_background_music = play_audio(
-                            filepath="prompts/4_thinking/hmm_google_padded.wav",
+                            filepath=thinking_file_path,
                             start_delay=0,
                             looping=False,
                             blocking=False,
                             killable=True)
                         thinking_background_music.start()
 
-
+                        # Calculate response time.
                         start_timer = time.time()
                         logger.info("Starting Response")
                         response = respond(transcription)
                         logger.info(f"Completed Response in [{time.time() - start_timer}] ")
                         logger.info(f"    > {response}")
 
+                        # Stop audio and start over.
                         if not response:
                             logger.warning("No response. Skipping this round.")
                             logger.info(END_SIGN)
@@ -119,25 +127,29 @@ if __name__ == "__main__":
                             continue
 
                         #### TTS (Text to Speech) #####
+                        # Calculate TTS time.
                         start_timer = time.time()
                         logger.info("Starting TTS")
                         audio_file_path = tts(response)
                         logging.info(f"Completed TTS in [{time.time() - start_timer}] ")
                         logger.info(f"    > {audio_file_path}")
 
+                        # Stop audio and start over.
                         if not audio_file_path:
                             logger.warning("No file generated. Skipping this round.")
                             logger.info(END_SIGN)
                             thinking_background_music.stop()
                             continue
 
-
+                        # Stop the "thinking" audio.
                         thinking_background_music.stop()
 
-
-                        ##### Play the audio #####
+                        ##### Play the response from the bot #####
+                        # Record how long the utterance it.
                         start_timer = time.time()
                         logger.info("Playing audio.")
+
+                        # Play the response.
                         reply_audio = play_audio(
                             filepath=audio_file_path,
                             start_delay=0,

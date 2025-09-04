@@ -4,6 +4,8 @@ from flask_restful import Resource
 import io
 import logging
 import numpy as np
+import os
+import random
 import requests
 from sentence_transformers import SentenceTransformer
 import subprocess
@@ -170,3 +172,23 @@ def decode_base64_wav_to_np(audio_b64 : str) -> np.ndarray:
             # Convert to mono by averaging channels
             audio_np = audio_np.reshape(-1, n_channels).mean(axis=1).astype(np.int16)
     return audio_np
+
+
+def get_random_file(folder_path : str) -> str:
+    """
+    Returns a randomly selected file path from the given folder.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to the folder containing files.
+
+    Returns
+    -------
+    str
+        Full path to a randomly selected file.
+    """
+    files = [f for f in os.listdir(folder_path) if \
+             os.path.isfile(os.path.join(folder_path, f))]
+
+    return os.path.join(folder_path, random.choice(files))
