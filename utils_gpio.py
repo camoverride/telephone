@@ -51,7 +51,7 @@ def phone_picked_up() -> bool:
             user_input = sys.stdin.readline().strip()
             if user_input.lower() == "q":
 
-                raise PhonePutDownError
+                # raise PhonePutDownError
                 return False
 
         return True
@@ -61,7 +61,7 @@ def phone_picked_up() -> bool:
             return True
 
         else:
-            raise PhonePutDownError
+            # raise PhonePutDownError
             return False
 
     # If it's some other system, return True.
