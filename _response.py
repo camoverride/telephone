@@ -35,8 +35,7 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-if (config["response_model"] == "deepseek") or \
-        (config["fallback_response_model"] == "deepseek"):
+if config["response_model"] in ["deepseek", "deepseek_streaming"]:
     # Deepseek API key. Git ignored.
     DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
     with open(DEEPSEEK_API_KEY_PATH, "r") as f:
@@ -154,7 +153,8 @@ def translate(
 
 def deepseek_model(
     text: str,
-    system_prompt : str) -> Optional[str]:
+    system_prompt : str,
+    stream : bool) -> Optional[str]:
     """
     Use the deepseek LLM to produce a response related to the text.
 
@@ -167,6 +167,8 @@ def deepseek_model(
         Something said by a user.
     system_prompt : str
         System prompt.
+    stream : bool
+        Whether or not to stream data.
 
     Returns
     -------
@@ -185,7 +187,10 @@ def deepseek_model(
         stream=False,
         temperature=1.5)
 
-    return response.choices[0].message.content
+    if not stream:
+        # Normal (blocking) response.
+        return response.choices[0].message.content
+
 
 
 def tiny_llama_model(
@@ -338,7 +343,8 @@ def get_response(
         try:
             response = deepseek_model(
                 text=text,
-                system_prompt=system_prompt)
+                system_prompt=system_prompt,
+                stream=False)
             return response
 
         except requests.exceptions.RequestException as e:

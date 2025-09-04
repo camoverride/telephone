@@ -9,6 +9,7 @@ asr_api_url: "http://localhost:8011/asr"
 asr_model: vosk # Options: vosk.
 
 # Response Parameters.
+# response_api_url: "http://localhost:8012/response/stream"
 response_api_url: "http://localhost:8012/response"
 response_model: deepseek # Options: echo, random_markov, tiny_llama, deepseek, jeff.
 system_prompt: "Give a short reply. Reply in no more than 30 words."

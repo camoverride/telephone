@@ -459,4 +459,3 @@ def tts(response):
         tts_server_url=CONFIG["tts_api_url"])
 
     return audio_path
-
