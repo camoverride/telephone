@@ -1,42 +1,25 @@
-# Interaction sounds.
-starting_audio_prompt: prompts/1_start_prompt/cameron_says_hello.wav
-prompt_start_delay: 0.5
-prompt_closing_sound: prompts/2_start_reply/beep_soft.wav
-recording_background_sound: prompts/3_waiting_for_user_input/musical_soft_background_softer.wav
-thinking_sound: "prompts/4_thinking/chime_waiting_faster.wav"
-end_interaction_sound: "prompts/5_end_prompt/hang_up_tone.mp3"
+# Recording parameters (VAD).
+vad_api_url: "http://localhost:8010/record"
+min_recording_duration: 2
+max_recording_duration: 20 # 10
+silence_duration_to_stop: 2 # 1
 
-# Recording parameters.
-min_recording_duration: 5
-max_recording_duration: 25
-silence_timeout: 3
+# Speech to text parameters (ASR).
+asr_api_url: "http://localhost:8011/asr"
+asr_model: vosk # Options: vosk.
 
-# ASR model options: `vosk`.
-speech_to_text_model: vosk
+# Response Parameters.
+response_api_url: "http://localhost:8012/response"
+response_model: deepseek # Options: echo, random_markov, tiny_llama, deepseek, jeff.
+system_prompt: "Give a short reply. Reply in no more than 30 words."
+# system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
 
-# Response model options: 
-# `echo`, `random_markov`, `tiny_llama`, `deepseek`, `jeff`.
-response_model: deepseek
-text_to_speech_language: zh-CN # not applicable with all models.
-fallback_response_model: deepseek
+# Text to Speech parameters (TTS).
+tts_api_url: http://localhost:8013/tts
+text_to_speech_model: google_tts # Options: command_line, google_tts, pytts
+tts_language: en
+tts_file_output_path: "__output.wav"
+# jeff_tts_model_url: http://100.116.247.74:5000/tts
 
-# TTS model options: `command_line`, `google_tts`, `pytts`
-# NOTE: `google_tts` requires internet connection!
-text_to_speech_model: google_tts
-jeff_tts_model_url: http://100.116.247.74:5000/tts
-
-
-
-
-
-# System prompts are only applicable for some LLM models (`tiny_llama`, `deepseek`).
-# system_prompt: "Generate a simple 3-7-3 haiku based off the following text"
-# system_prompt: Give a very short reply in the voice of a rich person. No more than 15 words."
-system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
-
-
-# API endpoint if using tiny_llama.
-tiny_llama_api_url: "http://100.116.247.74:5000/generate"
-
-# API endpoint for the printer server
+# API endpoint for the printer server.
 printer_server_url: http://100.114.191.58:5000/print
