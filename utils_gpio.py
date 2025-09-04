@@ -24,8 +24,7 @@ else:
     print("Not Linux, skipping GPIO setup.")
 
 
-
-def phone_picked_up() -> bool:
+def phone_picked_up(throw_error : bool = True) -> bool:
     """
     Returns True if the phone is picked up, otherwise False.
 
@@ -51,8 +50,10 @@ def phone_picked_up() -> bool:
             user_input = sys.stdin.readline().strip()
             if user_input.lower() == "q":
 
-                # raise PhonePutDownError
-                return False
+                if throw_error:
+                    raise PhonePutDownError
+                else:
+                    return False
 
         return True
 
@@ -61,8 +62,10 @@ def phone_picked_up() -> bool:
             return True
 
         else:
-            # raise PhonePutDownError
-            return False
+            if throw_error:
+                raise PhonePutDownError
+            else:
+                return False
 
     # If it's some other system, return True.
     else:

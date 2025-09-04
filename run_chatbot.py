@@ -23,7 +23,7 @@ END_SIGN = "------------------------------------------"
 if __name__ == "__main__":
 
     while True:
-        if phone_picked_up():
+        if phone_picked_up(throw_error=False):
             recording_prompt = None
             beep = None
             listening_background_music = None
