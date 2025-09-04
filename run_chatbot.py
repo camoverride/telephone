@@ -40,7 +40,7 @@ if __name__ == "__main__":
                 logger.info("Playing interaction starting prompt.")
                 recording_prompt = play_audio(
                     filepath=starting_audio,
-                    start_delay=0,
+                    start_delay=0.5,
                     looping=False,
                     blocking=True,
                     killable=True)

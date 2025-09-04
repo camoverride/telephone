@@ -46,7 +46,7 @@ class play_audio:
     def __init__(
         self,
         filepath : str,
-        start_delay : int,
+        start_delay : float,
         looping : bool,
         blocking : bool,
         killable : bool):
