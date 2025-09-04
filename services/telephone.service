@@ -1,0 +1,15 @@
+[Unit]
+Description=run telephone chatbot service
+After=default.target
+
+[Service]
+Type=simple
+Restart=always
+WorkingDirectory=/home/pi/telephone
+ExecStart=/home/pi/telephone/.venv/bin/python /home/pi/telephone/run_chatbot.py
+StandardOutput=journal
+StandardError=journal
+Environment="PATH=/home/pi/telephone/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=default.target

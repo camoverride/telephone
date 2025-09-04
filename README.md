@@ -110,7 +110,7 @@ To simulate the phone being put down, press 'q' + ENTER.
 Start a service with *systemd*. This will start the program when the computer starts and revive it when it dies. It expects that the username is `pi`:
 
 - `mkdir -p ~/.config/systemd/user`
-- `cat telephone.service > ~/.config/systemd/user/telephone.service`
+- `cat services/telephone.service > ~/.config/systemd/user/telephone.service`
 
 Start the service using the commands below:
 
@@ -131,6 +131,16 @@ Get the logs:
 - `journalctl --user -u telephone.service`
 
 
+## Run Servers
+
+This depends on 4 servers: `vad`, `asr`, `response`, and `tts`.
+
+- `cat <server>.service > ~/.config/systemd/user/<server>.service`
+- `systemctl --user daemon-reload`
+- `systemctl --user enable <server>.service`
+- `systemctl --user start <server>.service`
+
+
 ## Increase System Longevity
 
 Follow these steps in order:
@@ -145,24 +155,6 @@ Follow these steps in order:
 License: Non-Commercial MIT-style license. See `LICENSE` for details.
 
 
+## TODO 
 
-
-TODO: 
-- no timeout for silero VAD!
-- only audio is cancelable -- make it all!
-- test for other error types, or times when function moves on but with bad inputs to next step!
-- MUST be `config.yaml`
-
-
-make these all external servers:
-  from _silero_vad import record_audio_with_silero_vad
-  from _speech_to_text import speech_to_text
-  from _response import get_response
-  from _text_to_speech import text_to_speech
-then communicate with them via processes that can be tracked and killed
-these processes (HTTP requests) are cheap to spawn and can be easily killed
-otherwise reloading all the processes is too heavy!
-
-
-
-# TODO: experiment with larger vosk models!
+- experiment with larger vosk models!
