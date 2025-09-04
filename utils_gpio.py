@@ -4,22 +4,25 @@ import sys
 
 
 
-# System-dependent import. Get The GPIO pins on Raspbian.
-# Check for Raspbian specifically, and not just any Linux system.
+button = None  # default if GPIO is unavailable
+
+# Only attempt GPIO import on Linux
 if platform.system() == "Linux":
     try:
-        with open("/etc/os-release") as f:
-            os_info = f.read().lower()
-            if "raspbian" in os_info:
+        # Check for Pi by reading the CPU info
+        with open("/proc/cpuinfo") as f:
+            cpuinfo = f.read().lower()
+            if "raspberry pi" in cpuinfo:
                 from gpiozero import Button  # type: ignore
-                # GPIO 17 with 50ms debounce time.
                 button = Button(17, bounce_time=0.05)
+                print("GPIO setup complete.")
             else:
-                print("Not running on Raspbian, skipping GPIO setup.")
+                print("Not a Raspberry Pi, skipping GPIO setup.")
     except FileNotFoundError:
-        print("Could not read /etc/os-release to check \
-                         for Raspbian. Skipping GPIO setup.")
-    from gpiozero import Button # type: ignore
+        print("Could not read /proc/cpuinfo, skipping GPIO setup.")
+else:
+    print("Not Linux, skipping GPIO setup.")
+
 
 
 def phone_picked_up() -> bool:
