@@ -1,6 +1,6 @@
 import logging
 import time
-from utils import get_random_file
+from utils_simple import get_random_file
 from utils_apis import vad, asr, respond, tts
 from utils_gpio import phone_picked_up
 from utils_play_audio import play_audio
@@ -17,6 +17,7 @@ logging.basicConfig(
         # Write logs to a file.
         logging.FileHandler("logs/main.log")])
 logger = logging.getLogger(__name__)
+
 END_SIGN = "------------------------------------------"
 
 

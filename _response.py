@@ -165,6 +165,8 @@ def deepseek_model(
     ----------
     text : str
         Something said by a user.
+    system_prompt : str
+        System prompt.
 
     Returns
     -------
