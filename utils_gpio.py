@@ -57,7 +57,7 @@ def phone_picked_up() -> bool:
         return True
 
     elif platform.system() == "Linux":
-        if button.is_pressed:
+        if button.is_pressed: # type: ignore
             return True
 
         else:

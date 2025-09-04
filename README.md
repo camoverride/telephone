@@ -158,3 +158,4 @@ License: Non-Commercial MIT-style license. See `LICENSE` for details.
 ## TODO 
 
 - experiment with larger vosk models!
+- audio might not actually be killable - dies in main loop from exceptions only

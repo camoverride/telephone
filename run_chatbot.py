@@ -22,14 +22,13 @@ END_SIGN = "------------------------------------------"
 
 if __name__ == "__main__":
 
-
     while True:
-        recording_prompt = None
-        beep = None
-        listening_background_music = None
-        thinking_background_music = None
-        try:
-            if phone_picked_up():
+        if phone_picked_up():
+            recording_prompt = None
+            beep = None
+            listening_background_music = None
+            thinking_background_music = None
+            try:
                 logging.info("--------STARTING NEW INTERACTION--------")
                 # Opening sound.
                 # starting_audio = choose_from_dir("prompts/1_start_prompt/jeff_starts")
@@ -137,13 +136,13 @@ if __name__ == "__main__":
                         ##### Play the audio #####
                         start_timer = time.time()
                         logger.info("Playing audio.")
-                        recording = play_audio(
+                        reply_audio = play_audio(
                             filepath=audio_file_path,
                             start_delay=0,
                             looping=False,
                             blocking=True,
                             killable=True)
-                        recording.start()
+                        reply_audio.start()
                         logger.info(f"Finished playing audio in [{time.time() - start_timer}]")
                         logger.info(END_SIGN)
 
@@ -157,6 +156,8 @@ if __name__ == "__main__":
                             listening_background_music.stop()
                         if thinking_background_music:
                             thinking_background_music.stop()
+                        if reply_audio:
+                            reply_audio.stop()
 
                     # Phone not picked up!
                     # Should return to the beginning.
@@ -164,23 +165,26 @@ if __name__ == "__main__":
                         time.sleep(0.1)
                         continue
 
-            else:
-                time.sleep(0.1)
+            
+            # Top level exceptions are triggered by errors.
+            except Exception as e:
+                logger.warning("Top level exception!")
+                logger.warning(e)
+                continue
+    
+            # Clean up all sounds.
+            finally:
+                if recording_prompt:
+                    recording_prompt.stop()
+                if beep:
+                    beep.stop()
+                if listening_background_music:
+                    listening_background_music.stop()
+                if thinking_background_music:
+                    thinking_background_music.stop()
+                if reply_audio:
+                    reply_audio.stop()
+                time.sleep(1)
 
-        # Top level exceptions are triggered by errors.
-        except Exception as e:
-            logger.warning("Top level exception!")
-            logger.warning(e)
-            continue
-
-        # Clean up all sounds.
-        finally:
-            if recording_prompt:
-                recording_prompt.stop()
-            if beep:
-                beep.stop()
-            if listening_background_music:
-                listening_background_music.stop()
-            if thinking_background_music:
-                thinking_background_music.stop()
-            time.sleep(1)
+        else:
+            time.sleep(0.1)
