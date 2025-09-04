@@ -1,64 +1,24 @@
 # Telephone ☎️ 
 
-The code for an interactive rotary telephone chatbot by [Cam Smith](https://smith.cam/).
+The code for an interactive rotary telephone chatbot by [Cam Smith](https://smith.cam/telephone.html).
 
 
 ## Overview
 
-This project allows configuration of several different parts
+This project allows configuration of several different parts of the chatbot pipeline.
+You can see more in `config.yaml`:
 
+- *Recording parameters* change how audio is picked up and recorded.
+- *ASR parameters* change how audio is converted into input text.
+- *Response parameters* change how a reply is made in response to the input text.
+- *TTS parameters* change how the reply is spoken.
 
-### Configuration
-
-Which hardware this is configured on:
-
-- *phone*: A custom rotary telephone described in the wiki that detects phone pick-up and put-down.
-- *standard*: A computer with a mic and speaker attached.
-
-
-### Chat Mode
-
-The overall conversation mode:
-
-- *echo*: repeats back whataver is heard.
-- *translate*: translates whatever is heard into a specified. language.
-- *chat*: returns a reply based on previous replies, chat format.
-
-
-### Voice
-
-Which text-to-speech (TTS) voice model should be used:
-
-- *google-tts*: google's TTS model, (requires an internet connection).
-- *terminal*: uses whichever local TTS software is on your machine (e.g. `say` on MacOS).
-- *jeff*: custom voice model based off Jeff Bezos.
-- *cam*: custom voice model based off the artist, Cam Smith.
-
-
-### Personality
-
-When using the *chat* mode, which personality will the agent have:
-
-- *deepseek-memoryless*: A one-off reply from the deepseek API, with no memory of previous chats.
-- *deepseek-remember*: A reply from the deepseek API, with a memory of previous chats.
-- *tinyllama-memoryless*: A reply from a locally configured tiny-llama API endpoint.
-- *markov*: A word-salad reply from a random markov model conditioned on Wikipedia text.
-
-
-### Sounds
-
-The sounds that are played at different points during the user interaction, saved in `prompts`:
-
-- *start-prompt*: the audio played at the beginning of an interaction (`prompts/1_start_prompt`).
-- *start-reply*: the audio played to indicate the end of *start-prompt* and beginning of *waiting-for-user-input* (`prompts/2_start_reply`).
-- *waiting-for-user-input*: the audio played while waiting for user input (`prompts/3_waiting_for_user_input`).
-- *thinking* : the audio played while waiting to generate a reply (`prompts/4_thinking`).
-- *end-prompt*: the audio played at the end of an interaction (`prompts/5_end_prompt`).
+See [the wiki](https://github.com/camoverride/telephone/wiki/Settings) for more info.
 
 
 ## Materials & Assembly Guide
 
-See [the wiki](https://github.com/camoverride/telephone/wiki)
+See [the wiki](https://github.com/camoverride/telephone/wiki).
 
 
 ## Setup
@@ -100,9 +60,18 @@ If using the vector_quotes model, first download the quotes spreadsheet as an Ex
 
 ## Test
 
-- `python run_chatbot.py 2>/dev/null`
+First run all the servers in different processed (command line interfaces):
 
-To simulate the phone being put down, press 'q' + ENTER.
+- `python _silero_vad.py`
+- `python _speech_to_text.py`
+- `python _response.py`
+- `python _text_to_speech.py`
+
+Then run the chatbot:
+
+- `python run_chatbot.py`
+
+To simulate the phone being put down, press **'q'** + **ENTER**.
 
 
 ## Run in Production
@@ -130,24 +99,12 @@ Get the logs:
 
 - `journalctl --user -u telephone.service`
 
-
-## Run Servers
-
 This depends on 4 servers: `vad`, `asr`, `response`, and `tts`.
 
 - `cat services/<server>.service > ~/.config/systemd/user/<server>.service`
 - `systemctl --user daemon-reload`
 - `systemctl --user enable <server>.service`
 - `systemctl --user start <server>.service`
-
-
-## Increase System Longevity
-
-Follow these steps in order:
-
-- Install tailscale for remote access and debugging.
-- Configure backup wifi networks.
-- Set up periodic reboots (cron job).
 
 
 ## Licence
