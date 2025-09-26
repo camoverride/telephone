@@ -37,14 +37,14 @@ if __name__ == "__main__":
                 ##### Play beginning (phone picked up) prompts #####
                 start_timer = time.time()
                 logger.info("Playing interaction starting prompt.")
-                recording_prompt = play_audio(
+                audio_playback = play_audio(
                     filepath=audio_filepath,
                     start_delay=0.5,
                     looping=False,
                     blocking=True,
                     killable=True)
-                recording_prompt.start()
-                recording_prompt.stop()
+                audio_playback.start()
+                audio_playback.stop()
 
                 pause_sound = play_audio(
                     filepath="CAM_audio_files/pause.wav",
