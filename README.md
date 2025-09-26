@@ -60,7 +60,7 @@ If using the vector_quotes model, first download the quotes spreadsheet as an Ex
 
 ## Test
 
-First run all the servers in different processed (command line interfaces):
+First run all the servers in different processes (command line interfaces):
 
 - `python _silero_vad.py`
 - `python _speech_to_text.py`

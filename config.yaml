@@ -20,7 +20,7 @@ tts_api_url: http://localhost:8013/tts
 text_to_speech_model: google_tts # Options: command_line, google_tts, pytts
 tts_language: en
 tts_file_output_path: "__output.wav"
-# jeff_tts_model_url: http://100.116.247.74:5000/tts
+jeff_tts_model_url: http://100.116.247.74:5000/tts
 
 # API endpoint for the printer server.
 printer_server_url: http://100.114.191.58:5000/print
