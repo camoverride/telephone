@@ -12,7 +12,8 @@ asr_model: vosk # Options: vosk.
 # response_api_url: "http://localhost:8012/response/stream"
 response_api_url: "http://localhost:8012/response"
 response_model: deepseek # Options: echo, random_markov, tiny_llama, deepseek, jeff.
-system_prompt: "Give a short reply. Reply in no more than 30 words."
+system_prompt: "Please turn the following text into a simple and short haiku: "
+# system_prompt: "Give a short reply. Reply in no more than 30 words."
 # system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
 
 # Text to Speech parameters (TTS).
@@ -23,4 +24,5 @@ tts_file_output_path: "__output.wav"
 jeff_tts_model_url: http://100.116.247.74:5000/tts
 
 # API endpoint for the printer server.
+print_text: True
 printer_server_url: http://100.114.191.58:5000/print

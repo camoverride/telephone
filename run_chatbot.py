@@ -1,6 +1,7 @@
 import logging
 import time
-from utils_simple import get_random_file
+import yaml
+from utils_simple import get_random_file, print_text
 from utils_apis import vad, asr, respond, tts
 from utils_gpio import phone_picked_up
 from utils_play_audio import play_audio
@@ -20,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 END_SIGN = "------------------------------------------"
 
+
+# Load the config to get printer information
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 
 if __name__ == "__main__":
@@ -160,6 +165,12 @@ if __name__ == "__main__":
                         reply_audio.start()
                         logger.info(f"Finished playing audio in [{time.time() - start_timer}]")
                         logger.info(END_SIGN)
+
+                        # Optionally print the response.
+                        if config["print_text"]:
+                            print_text(
+                                text=response,
+                                printer_api=config["printer_server_url"])
 
 
                         # Clean up sounds.
