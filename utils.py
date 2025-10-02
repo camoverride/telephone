@@ -70,32 +70,6 @@ def ignored_phrases(text : str) -> bool:
     return False
 
 
-def print_text(
-    text : str,
-    printer_api: str) -> None:
-    """
-    Sends some text to a thermal printer to be printed out.
-
-    Parameters
-    ----------
-    text : str
-        Some text to be printed
-    printer_api : str
-        The endpoint.
-
-    Returns
-    -------
-    None
-        Prints text.
-    """
-    data = {"text": text}
-
-    response = requests.post(
-        printer_api,
-        json=data,
-        timeout=(1.0, 10.0)) # (connect_timeout, read_timeout)
-
-
 def create_embedding(text : str) -> np.ndarray:
     """
     Create a sentence embedding from text using SentenceTransformer.
