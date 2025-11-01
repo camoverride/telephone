@@ -1,5 +1,7 @@
+import datetime
 import os
 import random
+import wave
 
 
 
@@ -21,3 +23,18 @@ def get_random_file(folder_path : str) -> str:
              os.path.isfile(os.path.join(folder_path, f))]
 
     return os.path.join(folder_path, random.choice(files))
+
+
+
+def save_audio(
+    audio_file,
+    save_folder) -> None:
+
+    os.makedirs(save_folder, exist_ok=True)
+    filename = f"{save_folder}/recording_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+    
+    with wave.open(filename, "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(16000)
+        f.writeframes(audio_file)

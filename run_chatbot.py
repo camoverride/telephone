@@ -1,7 +1,7 @@
 import logging
 import time
-from utils_simple import get_random_file
-from utils_apis import vad, asr, respond, tts
+from utils_simple import get_random_file, save_audio
+from utils_apis import vad #, asr, respond, tts
 from utils_gpio import phone_picked_up
 from utils_play_audio import play_audio
 
@@ -27,16 +27,19 @@ if __name__ == "__main__":
     while True:
         if phone_picked_up(throw_error=False):
             recording_prompt = None
+            random_prompt = None
             beep = None
             listening_background_music = None
-            thinking_background_music = None
-            reply_audio = None
+            closing_prompt = None
+            hang_up_tone = None
+
+
             try:
                 logging.info("--------STARTING NEW INTERACTION--------")
                 # Opening sound.
                 starting_audio = "prompts/0_pick_up/lets_chat_google.wav"
 
-                ##### Play beginning (phone picked up) prompts #####
+                # Play beginning (phone picked up) prompt
                 start_timer = time.time()
                 logger.info("Playing interaction starting prompt.")
                 recording_prompt = play_audio(
@@ -48,6 +51,21 @@ if __name__ == "__main__":
                 recording_prompt.start()
                 recording_prompt.stop()
 
+                # Play a random audio file.
+                randomly_selected_audio_file = get_random_file("CAM_party_files")
+
+                start_timer = time.time()
+                logger.info("Playing randomly selected audio file.")
+                random_prompt = play_audio(
+                    filepath=randomly_selected_audio_file,
+                    start_delay=0.5,
+                    looping=False,
+                    blocking=True,
+                    killable=True)
+                random_prompt.start()
+                random_prompt.stop()
+
+                # Interrupt the starting prompt and randomly selected audio.
                 beep = play_audio(
                     filepath="prompts/2_start_reply/beep_soft.wav",
                     start_delay=0,
@@ -56,7 +74,6 @@ if __name__ == "__main__":
                     killable=True)
                 beep.start()
                 beep.stop()
-
 
                 # Main ASR / Response / TTS event loop.
                 while True:
@@ -84,95 +101,42 @@ if __name__ == "__main__":
                             listening_background_music.stop()
                             continue
 
-                        ##### ASR (Speech Recognition) #####
-                        # Calculate ASR time.
-                        start_timer = time.time()
-                        logger.info("Starting ASR")
-                        transcription = asr(audio)
-                        logger.info(f"Completed ASR in [{time.time() - start_timer}] ")
-                        logger.info(f"    > {transcription}")
-
-                        # Stop the "listening" music.
-                        listening_background_music.stop()
-
-                        # Stop audio and start over.
-                        if not transcription:
-                            logger.warning("No transcription. Skipping this round.")
-                            logger.info(END_SIGN)
-                            listening_background_music.stop()
-                            continue
-
-                        ##### Response (Thinking) #####
-                        # Get a filler "thinking sound" to play once.
-                        thinking_file_path = get_random_file("prompts/4_thinking/google_tts")
-                        thinking_background_music = play_audio(
-                            filepath=thinking_file_path,
-                            start_delay=0,
-                            looping=False,
-                            blocking=False,
-                            killable=True)
-                        thinking_background_music.start()
-
-                        # Calculate response time.
-                        start_timer = time.time()
-                        logger.info("Starting Response")
-                        response = respond(transcription)
-                        logger.info(f"Completed Response in [{time.time() - start_timer}] ")
-                        logger.info(f"    > {response}")
-
-                        # Stop audio and start over.
-                        if not response:
-                            logger.warning("No response. Skipping this round.")
-                            logger.info(END_SIGN)
-                            thinking_background_music.stop()
-                            continue
-
-                        #### TTS (Text to Speech) #####
-                        # Calculate TTS time.
-                        start_timer = time.time()
-                        logger.info("Starting TTS")
-                        audio_file_path = tts(response)
-                        logging.info(f"Completed TTS in [{time.time() - start_timer}] ")
-                        logger.info(f"    > {audio_file_path}")
-
-                        # Stop audio and start over.
-                        if not audio_file_path:
-                            logger.warning("No file generated. Skipping this round.")
-                            logger.info(END_SIGN)
-                            thinking_background_music.stop()
-                            continue
-
-                        # Stop the "thinking" audio.
-                        thinking_background_music.stop()
-
-                        ##### Play the response from the bot #####
-                        # Record how long the utterance it.
-                        start_timer = time.time()
-                        logger.info("Playing audio.")
-
-                        # Play the response.
-                        reply_audio = play_audio(
-                            filepath=audio_file_path,
-                            start_delay=0,
+                        # Save the audio.
+                        save_audio(
+                            audio_file=audio,
+                            save_folder="CAM_party_files")
+                        
+                        # Play the closing prompt.
+                        logger.info("Playing closing prompt.")
+                        closing_prompt = play_audio(
+                            filepath="prompts/CAM_closing_prompt.wav",
+                            start_delay=0.5,
                             looping=False,
                             blocking=True,
                             killable=True)
-                        reply_audio.start()
-                        logger.info(f"Finished playing audio in [{time.time() - start_timer}]")
-                        logger.info(END_SIGN)
-
+                        closing_prompt.start()
+                        closing_prompt.stop()
 
                         # Clean up sounds.
                         if recording_prompt:
                             recording_prompt.stop()
+                        if random_prompt:
+                            random_prompt.stop()
                         if beep:
                             beep.stop()
                         if listening_background_music:
                             listening_background_music.stop()
-                        if thinking_background_music:
-                            thinking_background_music.stop()
-                        if reply_audio:
-                            reply_audio.stop()
+                        if closing_prompt:
+                            closing_prompt.stop()
+
+                        # Clean-up sound
+                        hang_up_tone = play_audio(
+                            filepath="prompts/5_end_prompt/hang_up_tone.mp3",
+                            start_delay=0,
+                            looping=True,
+                            blocking=True,
+                            killable=True)
+                        hang_up_tone.start()
 
                     # Phone not picked up!
                     # Should return to the beginning.
@@ -191,14 +155,16 @@ if __name__ == "__main__":
             finally:
                 if recording_prompt:
                     recording_prompt.stop()
+                if random_prompt:
+                    random_prompt.stop()
                 if beep:
                     beep.stop()
                 if listening_background_music:
                     listening_background_music.stop()
-                if thinking_background_music:
-                    thinking_background_music.stop()
-                if reply_audio:
-                    reply_audio.stop()
+                if closing_prompt:
+                    closing_prompt.stop()
+                if hang_up_tone:
+                    hang_up_tone.stop()
                 time.sleep(1)
 
         else:
