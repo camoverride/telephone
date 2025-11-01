@@ -1,6 +1,8 @@
+import base64
 import datetime
 import os
 import random
+from typing import Union
 import wave
 
 
@@ -26,26 +28,52 @@ def get_random_file(folder_path : str) -> str:
 
 
 def save_audio(
-    filepath: str,
-    save_folder: str) -> None:
+    audio_file: Union[str, bytes],  # Can be base64 string or raw bytes
+    save_folder: str,
+    channels: int = 1,
+    sampwidth: int = 2,
+    framerate: int = 16000
+) -> str:
     """
-    Reads an existing audio file (WAV) from `filepath`
-    and saves a copy into `save_folder` with a timestamped filename.
+    Save audio data to a WAV file.
+
+    Parameters
+    ----------
+    audio_file : str | bytes
+        Audio data to save. If a string, it should be base64-encoded WAV bytes.
+    save_folder : str
+        Folder path where the WAV file will be saved. Will be created if it doesn't exist.
+    channels : int, optional
+        Number of audio channels (default is 1, mono).
+    sampwidth : int, optional
+        Sample width in bytes (default is 2 bytes = 16-bit audio).
+    framerate : int, optional
+        Sampling rate in Hz (default is 16000).
+
+    Returns
+    -------
+    str
+        The full path to the saved WAV file.
     """
+    # Ensure save folder exists
     os.makedirs(save_folder, exist_ok=True)
 
-    # Generate new filename
+    # Build filename with timestamp
     filename = os.path.join(
         save_folder, f"recording_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
     )
 
-    # Read and write WAV data
-    with wave.open(filepath, "rb") as source:
-        params = source.getparams()
-        audio_data = source.readframes(params.nframes)
+    # If input is base64 string, decode it
+    if isinstance(audio_file, str):
+        audio_bytes = base64.b64decode(audio_file)
+    else:
+        audio_bytes = audio_file
 
-    with wave.open(filename, "wb") as target:
-        target.setparams(params)
-        target.writeframes(audio_data)
+    # Write WAV file
+    with wave.open(filename, "wb") as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(sampwidth)
+        wf.setframerate(framerate)
+        wf.writeframes(audio_bytes)
 
-    print(f"Saved audio copy to: {filename}")
+    return filename
