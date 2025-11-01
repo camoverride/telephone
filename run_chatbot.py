@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
                         # Save the audio.
                         save_audio(
-                            audio_file=audio,
+                            filepath=audio,
                             save_folder="CAM_party_files")
                         
                         # Play the closing prompt.

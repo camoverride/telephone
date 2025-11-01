@@ -25,16 +25,27 @@ def get_random_file(folder_path : str) -> str:
     return os.path.join(folder_path, random.choice(files))
 
 
-
 def save_audio(
-    audio_file,
-    save_folder) -> None:
-
+    filepath: str,
+    save_folder: str) -> None:
+    """
+    Reads an existing audio file (WAV) from `filepath`
+    and saves a copy into `save_folder` with a timestamped filename.
+    """
     os.makedirs(save_folder, exist_ok=True)
-    filename = f"{save_folder}/recording_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
-    
-    with wave.open(filename, "wb") as f:
-        f.setnchannels(1)
-        f.setsampwidth(2)
-        f.setframerate(16000)
-        f.writeframes(audio_file)
+
+    # Generate new filename
+    filename = os.path.join(
+        save_folder, f"recording_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+    )
+
+    # Read and write WAV data
+    with wave.open(filepath, "rb") as source:
+        params = source.getparams()
+        audio_data = source.readframes(params.nframes)
+
+    with wave.open(filename, "wb") as target:
+        target.setparams(params)
+        target.writeframes(audio_data)
+
+    print(f"Saved audio copy to: {filename}")
