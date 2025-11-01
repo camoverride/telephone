@@ -37,7 +37,7 @@ if __name__ == "__main__":
             try:
                 logging.info("--------STARTING NEW INTERACTION--------")
                 # Opening sound.
-                starting_audio = "prompts/0_pick_up/lets_chat_google.wav"
+                starting_audio = "prompts/cam_party_opening.wav"
 
                 # Play beginning (phone picked up) prompt
                 start_timer = time.time()
