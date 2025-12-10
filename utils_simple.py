@@ -2,9 +2,79 @@ import base64
 import datetime
 import os
 import random
-from typing import Union
+from typing import Union, List
 import wave
 
+
+
+def get_audio_file_paths_open_call(base_dir : str) -> List[str]:
+    """
+    Randomly selects a sub-folder from `base_dir` and returns the
+    full paths to the "intro file" and "music file" from this
+    directory. The "intro file" starts with "intro" and the music
+    file is the other file. Folders should contain only these two
+    files, both wavs. If these files don't exist or there are
+    additional files, this function throws an error.
+
+    Example:
+        For a directory like this:
+
+        base_dir
+            Bailey_Audio
+                intro.wav
+                my_music_file.wav
+            Samantha_Stuff
+                intro_file.wav
+                Song_About_Birds.wav
+        
+        One of the following two would be returned:
+            ["base_dir/Bailey_Audio/intro.wav", "base_dir/Bailey_Audio/intro.wav"]
+            ["base_dir/Samantha_Stuff/intro_file.wav", "base_dir/Samantha_Stuff/Song_About_Birds.wav"]
+    
+    Parameters
+    ----------
+    base_dir
+        A directory containing one or more sub-folders, each of
+        which contains an intro file and an audio file.
+
+    Returns
+    -------
+    List[str]
+        A list of length two, containing full paths from the base_dir
+        to the two audio files, with the intro file first:
+            ["base_dir/Bailey_Audio/intro.wav", "base_dir/Bailey_Audio/intro.wav"]
+    """
+    # Get all subdirectories.
+    subdirs = [d for d in os.listdir(base_dir)
+               if os.path.isdir(os.path.join(base_dir, d))]
+    if not subdirs:
+        raise ValueError(f"No subdirectories found in {base_dir}")
+
+    # Pick one at random.
+    chosen_dir = os.path.join(base_dir, random.choice(subdirs))
+
+    # List files in the chosen directory.
+    files = os.listdir(chosen_dir)
+    wav_files = [f for f in files if f.lower().endswith(".wav")]
+
+    # Check if there are exactly 2 files.
+    if len(wav_files) != 2:
+        raise ValueError \
+            (f"Expected exactly 2 WAV files in {chosen_dir}, found {len(wav_files)}.")
+
+    # Identify intro file.
+    intro_candidates = [f for f in wav_files if f.lower().startswith("intro")]
+    if len(intro_candidates) != 1:
+        raise ValueError \
+            (f"Expected exactly one intro file (starting with 'intro') in {chosen_dir}.")
+
+    intro_file = intro_candidates[0]
+    music_file = [f for f in wav_files if f != intro_file][0]
+
+    return [
+        os.path.join(chosen_dir, intro_file),
+        os.path.join(chosen_dir, music_file)
+        ]
 
 
 def get_random_file(folder_path : str) -> str:
