@@ -17,8 +17,6 @@ logging.basicConfig(
         logging.FileHandler("logs/main.log")])
 logger = logging.getLogger(__name__)
 
-END_SIGN = "------------------------------------------"
-
 
 
 if __name__ == "__main__":
