@@ -35,16 +35,13 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 
-if config["response_model"] in ["deepseek", "deepseek_streaming"]:
-    # Deepseek API key. Git ignored.
-    DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
-    with open(DEEPSEEK_API_KEY_PATH, "r") as f:
-        DEEPSEEK_API_KEY = f.read().strip()
+DEEPSEEK_API_KEY_PATH = "deepseek_api_key.txt"
+with open(DEEPSEEK_API_KEY_PATH) as f:
+    DEEPSEEK_API_KEY = f.read().strip()
 
-    # Access the client.
-    DEEPSEEK_CLIENT = OpenAI(
-        api_key=DEEPSEEK_API_KEY,
-        base_url="https://api.deepseek.com")
+DEEPSEEK_CLIENT = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com")
 
 
 # Load Markov model.
