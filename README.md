@@ -80,10 +80,10 @@ Start a service with *systemd*. This will start the program when the computer st
 
 - `mkdir -p ~/.config/systemd/user`
 
-- `cat services/vad.service > ~/.config/systemd/user/telephone.service`
-- `cat services/asr.service > ~/.config/systemd/user/telephone.service`
-- `cat services/response.service > ~/.config/systemd/user/telephone.service`
-- `cat services/tts.service > ~/.config/systemd/user/telephone.service`
+- `cat services/vad.service > ~/.config/systemd/user/vad.service`
+- `cat services/asr.service > ~/.config/systemd/user/asr.service`
+- `cat services/response.service > ~/.config/systemd/user/response.service`
+- `cat services/tts.service > ~/.config/systemd/user/tts.service`
 - `cat services/telephone.service > ~/.config/systemd/user/telephone.service`
 
 Start the service using the commands below:
