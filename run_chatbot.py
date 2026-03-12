@@ -107,7 +107,7 @@ if __name__ == "__main__":
                         thinking_background_music = play_audio(
                             filepath="prompts/4_thinking/chime_waiting_faster.wav",
                             start_delay=0,
-                            looping=False,
+                            looping=True,
                             blocking=False,
                             killable=True)
                         thinking_background_music.start()
