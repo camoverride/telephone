@@ -79,12 +79,27 @@ To simulate the phone being put down, press **'q'** + **ENTER**.
 Start a service with *systemd*. This will start the program when the computer starts and revive it when it dies. It expects that the username is `pi`:
 
 - `mkdir -p ~/.config/systemd/user`
+
+- `cat services/vad.service > ~/.config/systemd/user/telephone.service`
+- `cat services/asr.service > ~/.config/systemd/user/telephone.service`
+- `cat services/response.service > ~/.config/systemd/user/telephone.service`
+- `cat services/tts.service > ~/.config/systemd/user/telephone.service`
 - `cat services/telephone.service > ~/.config/systemd/user/telephone.service`
 
 Start the service using the commands below:
 
 - `systemctl --user daemon-reload`
+
+- `systemctl --user enable vad.service`
+- `systemctl --user enable asr.service`
+- `systemctl --user enable response.service`
+- `systemctl --user enable tts.service`
 - `systemctl --user enable telephone.service`
+
+- `systemctl --user start vad.service`
+- `systemctl --user start asr.service`
+- `systemctl --user start response.service`
+- `systemctl --user start tts.service`
 - `systemctl --user start telephone.service`
 
 Start it on boot:
