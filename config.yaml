@@ -12,12 +12,12 @@ asr_model: vosk # Options: vosk.
 # response_api_url: "http://localhost:8012/response/stream"
 response_api_url: "http://localhost:8012/response"
 response_model: deepseek # Options: echo, random_markov, tiny_llama, deepseek, jeff.
-system_prompt: "Give a short reply. Reply in no more than 30 words."
-# system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
+# system_prompt: "Give a short reply. Reply in no more than 30 words."
+system_prompt: "I am Jeff Bezos, a very rich man. I hate poor people. I love capitalism. Reply with no more than 15 words."
 
 # Text to Speech parameters (TTS).
 tts_api_url: http://localhost:8013/tts
-text_to_speech_model: google_tts # Options: command_line, google_tts, pytts
+text_to_speech_model: jeff # Options: command_line, google_tts, pytts, jeff
 tts_language: en
 tts_file_output_path: "__output.wav"
 jeff_tts_model_url: http://100.116.247.74:5000/tts
