@@ -373,7 +373,7 @@ def text_to_speech_api(
         response = requests.post(
             tts_server_url,
             json=payload,
-            timeout=10)
+            timeout=20)
         response.raise_for_status()
         result = response.json()
 
