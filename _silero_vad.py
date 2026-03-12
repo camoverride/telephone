@@ -200,7 +200,7 @@ class AudioRecordingAPI(Resource):
         """
         try:
             # Parse incoming JSON request.
-            data = request.get_json()
+            data = request.get_json(silent=True) or {}
 
             # Get parameters with defaults.
             silence_duration = data.get("silence_duration_to_stop")
