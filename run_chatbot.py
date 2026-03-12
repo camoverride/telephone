@@ -104,14 +104,13 @@ if __name__ == "__main__":
 
                         ##### Response (Thinking) #####
                         # Get a filler "thinking sound" to play once.
-                        # thinking_file_path = get_random_file("prompts/4_thinking/google_tts")
-                        # thinking_background_music = play_audio(
-                        #     filepath=thinking_file_path,
-                        #     start_delay=0,
-                        #     looping=False,
-                        #     blocking=False,
-                        #     killable=True)
-                        # thinking_background_music.start()
+                        thinking_background_music = play_audio(
+                            filepath="prompts/4_thinking/chime_waiting_faster.wav",
+                            start_delay=0,
+                            looping=False,
+                            blocking=False,
+                            killable=True)
+                        thinking_background_music.start()
 
                         # Calculate response time.
                         start_timer = time.time()
@@ -124,7 +123,7 @@ if __name__ == "__main__":
                         if not response:
                             logger.warning("No response. Skipping this round.")
                             logger.info(END_SIGN)
-                            # thinking_background_music.stop()
+                            thinking_background_music.stop()
                             continue
 
                         #### TTS (Text to Speech) #####
@@ -139,11 +138,11 @@ if __name__ == "__main__":
                         if not audio_file_path:
                             logger.warning("No file generated. Skipping this round.")
                             logger.info(END_SIGN)
-                            # thinking_background_music.stop()
+                            thinking_background_music.stop()
                             continue
 
                         # Stop the "thinking" audio.
-                        # thinking_background_music.stop()
+                        thinking_background_music.stop()
 
                         ##### Play the response from the bot #####
                         # Record how long the utterance it.
