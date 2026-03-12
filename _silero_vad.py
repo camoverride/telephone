@@ -213,12 +213,6 @@ class AudioRecordingAPI(Resource):
                 min_recording_duration=min_duration,
                 max_recording_duration=max_duration)
 
-            if audio_data is None:
-                return {
-                    "status": "failure",
-                    "message": "No speech detected."
-                }, 200
-
             # Convert the audio to base64.
             audio_b64 = encode_audio_to_base64(audio_data)
 
