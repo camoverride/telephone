@@ -50,7 +50,7 @@ if __name__ == "__main__":
                 intro_file.stop()
 
                 # Play the music file.
-                logger.info(f"Playing intro file: {music_file_path}")
+                logger.info(f"Playing music file: {music_file_path}")
                 music_file = play_audio(
                     filepath=music_file_path,
                     start_delay=0.5,
