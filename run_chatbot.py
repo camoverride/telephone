@@ -30,6 +30,8 @@ if __name__ == "__main__":
             listening_background_music = None
             closing_prompt = None
             hang_up_tone = None
+            intro_file = None
+            music_file = None
 
 
             try:
